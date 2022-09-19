@@ -1,0 +1,45 @@
+container Geography: Using = "Units"
+{
+	unit<fpoint> rdc_base : Format   = "EPSG:28992", DialogData = "ngr_layer";
+	unit<fpoint> rdc     := range(rdc_base, point(0f,300000f), point(280000f,625000f));
+
+	#include<ngr_layer.dms>
+	
+	container NL_grid: Using = "Units"
+	{
+		parameter<m> gridsize := 100[m];
+		
+		parameter<m> x_min := 0[m];
+		parameter<m> x_max := 280000[m];
+		parameter<m> y_min := 300000[m];
+		parameter<m> y_max := 625000[m];
+
+		parameter<int16> nr_cols := int16((x_max - x_min) / gridsize);
+		parameter<int16> nr_rows := int16((y_max - y_min) / gridsize);
+
+		unit<spoint> domain :=
+			range(
+				 gridset(
+					 rdc
+					,point(gridsize, -gridsize, rdc)
+					,point(x_min, y_max, rdc)
+					,spoint
+				)
+				,point(0s, 0s)
+				,point(nr_cols, nr_rows)
+			)
+		,	DialogData = "rdc";
+	}
+	
+	container Kernels
+	{
+		unit<spoint> kernel_100m := range(spoint, point(-20s, -20s), point(21s, 21s))
+		{
+			attribute<uint32>  distMatr          := dist2(point(0s, 0s, .), uint32);
+			attribute<float32> ddWeight          := 1f / ((float32(distMatr) + 150f) / 150f);
+			attribute<float32> relddWeight       := ddWeight / sum(ddWeight);
+			attribute<float32> SpecificWeight    := rjoin(distMatr, kernel_100m_weights/values, kernel_100m_weights/weight) ;
+			attribute<float32> relSpecificWeight := SpecificWeight / sum(SpecificWeight);
+		}
+	}
+}

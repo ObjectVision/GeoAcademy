@@ -1,0 +1,187 @@
+container GeoDMS_Academy_Allocation
+{
+	container Units
+	{
+		unit<float32> m             := baseunit('m', float32) ,label = "meter";
+		unit<Float32> M2_Eur        := 1.0 / Eur_M2;
+		unit<Float32> Eur_M2        := Eur / Meter2, cdf = "Classifications/Eur_M2_15K/Classes";
+		unit<Float32> Eur           := BaseUnit('EURO', float32);
+		unit<Float32> Meter2        := m * m;
+		unit<Float32> Ha            := 10000.0 * m * m;
+		unit<UInt16>  IterRange     : nrofrows = 999;
+		unit<Int16>   YearDiffRange : Range = "[-100, 100)";
+		
+		unit<Float32> DemandUnit    := BaseUnit('ClaimDemand', float32), Descr = "used for Aj balancing Factor";
+		unit<Float32> BcUnit        := Ha / DemandUnit, Descr = "used for Bj balancing Factor";
+		unit<Float32> claimHa       := Ha;
+		unit<Int8>    LossOrGain    : range = "[-1, 1)", cdf = "Classifications/LossOrGain_Class/Classes";
+		unit<Float32> Potentiaal    : cdf = "Classifications/Potentiaal10K/Classes";
+	}
+	
+	container Classifications : using = "units"
+	{
+		unit<uint8> LandUse : nrofrows = 10
+		{
+			parameter<uint32> nrAttr   := 6;
+			unit<uint32>      elements := range(uint32, 0, nrAttr * #LandUse)
+			{
+				attribute<String> text : [ 
+				//Name,          ,r    ,g    ,b      ,IsExo   ,IsUrban
+				'OSA'            ,'255','255','255'  ,'TRUE'  ,'FALSE',
+				'residential'    ,'255',' 60','  0'  ,'FALSE' ,'TRUE',
+				'otherbuiltup'   ,'170','170','170'  ,'FALSE' ,'TRUE',
+				'construction'   ,'255','211','127'  ,'FALSE' ,'TRUE',
+				'infrastructure' ,'100','100','100'  ,'TRUE'  ,'TRUE',
+				'urbangreen'     ,'177','214','  0'  ,'FALSE' ,'TRUE',
+				'agriculture'    ,'233','245','190'  ,'FALSE' ,'FALSE',
+				'nature'         ,'100','175','  0'  ,'FALSE' ,'FALSE',
+				'water'          ,'150','220','240'  ,'TRUE'  ,'FALSE',
+				'exteriorwater'  ,'150','220','240'  ,'TRUE'  ,'FALSE'
+				];
+			}
+			
+			attribute<uint8>      id           := id(.);
+			attribute<String>     label        := elements/text[value(UInt32(id(.))* nrAttr +  0, elements)], DialogType = "LabelText";
+			attribute<uint32>     r            := elements/text[value(UInt32(id(.))* nrAttr +  1, elements)][uint32];
+			attribute<uint32>     g            := elements/text[value(UInt32(id(.))* nrAttr +  2, elements)][uint32];
+			attribute<uint32>     b            := elements/text[value(UInt32(id(.))* nrAttr +  3, elements)][uint32];
+			attribute<bool>       IsExogeneous := elements/text[value(UInt32(id(.))* nrAttr +  4, elements)][bool];
+			attribute<bool>       IsUrban      := elements/text[value(UInt32(id(.))* nrAttr +  5, elements)][bool];
+			attribute<uint32>     BrushColor   := rgb(r, g, b), DialogType = "BrushColor";
+			attribute<string>     name         := replace(label, ' ', '_');
+			container             V            := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+		}
+		
+		unit<uint8> LandUse_Endogeneous := subset(!LandUse/IsExogeneous)
+		{
+			attribute<string>    label      := Landuse/label[nr_OrgEntity], DialogType = "LabelText";
+			attribute<string>    name       := LandUse/name[nr_OrgEntity];
+			attribute<uint32>    BrushColor := LandUse/BrushColor[nr_OrgEntity], DialogType = "BrushColor";
+			container            V          := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+		}
+		
+		unit<uint8> LandUse_Exogeneous := subset(LandUse/IsExogeneous)
+		{
+			attribute<uint8>     org_id     := id(LandUse)[nr_OrgEntity];
+			attribute<string>    label      := Landuse/label[nr_OrgEntity], DialogType = "LabelText";
+			attribute<string>    name       := LandUse/name[nr_OrgEntity];
+			attribute<uint32>    BrushColor := LandUse/BrushColor[nr_OrgEntity], DialogType = "BrushColor";
+			container            V          := for_each_nedv(name, String(org_id)+'[..]', void, .);
+		}
+		
+		unit<UInt8> Landuse_Urban := SubSet(LandUse/IsUrban)
+		{
+			attribute<string>    label        := Landuse/label[nr_OrgEntity], DialogType = "LabelText";
+			attribute<string>    name         := LandUse/name[nr_OrgEntity];
+			attribute<uint32>    BrushColor   := LandUse/BrushColor[nr_OrgEntity], DialogType = "BrushColor";
+			attribute<Bool>      IsExogeneous := LandUse/IsExogeneous[nr_OrgEntity];
+		}
+		
+		unit<uint8> LossOrGain_Class: nrofrows = 3
+		{
+			attribute<LossOrGain> Classes    : [ -1, 0, 1 ], DialogType = "Classification";
+			attribute<UInt32>     BrushColor : [rgb(0,192,0),rgb(192,192,192),rgb(255,0,0)], DialogType = "BrushColor";
+			attribute<String>     Label      : ['Loss','Stable','Gain'], DialogType = "LabelText";
+		}
+			
+		unit<uint8> OperatorType: nrofrows = 3
+		{
+			attribute<UInt32> BrushColor : [rgb(192,192,192),rgb(128,0,255),rgb(255,128,255)], DialogType = "BrushColor";
+			attribute<String> Label      : ['less-or-equal (max.)','equal','greater or equal (min.)'], DialogType = "LabelText";
+		}
+		
+		unit<uint8> Eur_M2_15K: nrofrows = 15
+		{
+			attribute<EUR_M2> Classes: DialogType = "Classification",
+			[
+				-20, -10, -2, -0.01,  0.01
+			,	  1,   2,  3,  4   ,  5
+			,	  6,   8, 10, 15   , 25
+			];
+
+			attribute<UInt32> attribute: DialogType = "BrushColor",
+			[
+				rgb(  0  ,0,255),rgb(128,128,255),rgb(204,225,236),rgb(192,192,192),rgb(128,128,128) // blauw -> grijs
+			,	rgb(  0,128,  0),rgb(  0,192,  0),rgb(  0,255,  0),rgb(232,232,  0),rgb(255,255,  0) // donker -> licht groen
+			,	rgb(255,255,155),rgb(255,192,62),rgb(255,128,128),rgb(255,  0,  0), rgb(192,  0,  0)
+			];
+
+			attribute<String> Label: DialogType = "LabelText",
+			[
+				'-20 to -10','-10 to -2',' -2 to -0','     0    ','  0 to  1'
+			,	'  1 to   2','  2 to  3','  3 to  4','  4 to  5' ,'  5 to  6'
+			,	'  6 to   8','  8 to 10',' 10 to 15',' 15 to 25' ,'25 to 40'
+			];
+		}
+	}
+	
+	#include <geography.dms>
+	
+	container SourceData: Using = "Units;Geography"
+	{
+		unit<uint16> Corop 
+		:	StorageName     = "%ProjDir%/Data/CBS_COROP_2012.shp"
+		,	StorageType     = "gdal.vect"
+		,	StorageReadOnly = "True"
+		{
+			attribute<rdc>              geometry  (polygon);
+			attribute<string>           label                          := statnaam ;
+			attribute<.>                per_grid      (NL_grid/domain) := poly2grid(geometry, NL_grid/domain);
+			attribute<Corop>            id                             := id(.);
+		}
+		
+		container Landuse
+		{
+			attribute <Classifications/LandUse> Predominant (NL_grid/domain) := 
+				='convert(
+					argmax(
+						'+asItemList(
+							'MakeDefined(
+								'+ iif(Classifications/LandUse/IsExogeneous
+									,'Exogeneous/'
+									,'Endogeneous/'
+								   )
+								+ Classifications/LandUse/Name+'
+								, value(0.0, Ha)
+							)
+						')
+					+')
+					, Classifications/LandUse
+				)';
+		
+			container LU_continuous := 
+				for_each_ndva(
+					classifications/Landuse/name
+					, NL_grid/domain
+					, Ha
+					, '%ProjDir%/Data/LU_continuous/share_lu_2017_'+classifications/Landuse/name+'.tif'
+				);
+				
+			container LU_discrete := 
+				for_each_nedv(
+					classifications/Landuse/name
+					, 'Predominant == classifications/Landuse/v/'+classifications/Landuse/name+' ?  1[Ha] : (0/0)[Ha]'
+					, NL_grid/domain
+					, Ha
+				);
+				
+			container Endogeneous := 
+				for_each_nedv(
+					classifications/LandUse_Endogeneous/name
+					, 'LU_continuous/'+classifications/LandUse_Endogeneous/name
+					, NL_grid/domain
+					, Ha
+				);
+				
+			container Exogeneous :=
+				for_each_nedv(
+					classifications/LandUse_Exogeneous/name
+					, 'LU_continuous/'+classifications/LandUse_Exogeneous/name
+					, NL_grid/domain
+					, Ha
+				);
+		}
+	}	
+
+	#include <results.dms>
+}

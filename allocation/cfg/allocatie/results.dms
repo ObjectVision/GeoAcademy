@@ -1,0 +1,400 @@
+container Results : Using = "Units;SourceData;Geography;Classifications"
+{
+	container Discrete
+	{
+		attribute <LandUse> Result_discrete (NL_grid/domain) := Allocation/LandUse_rel[invert(Input/Compacted/ADomain/nr_OrgEntity)];
+	
+		container Input
+		{
+			///Aggregation regions, are the regions on which the claims are defined
+			unit<uint16> AggRegio := SourceData/Corop;
+			
+			//Compacted means, the set of grid cells that should be considered. In this case, this means that the exterior and exterior water are excluded.
+			container Compacted
+			{
+				unit<uint32> ADomain := subset(IsDefined(AggRegio/per_grid))
+				, DialogType = "Map"
+				, DialogData = "BaseGrid";
+				attribute<ADomain> BaseGrid (NL_grid/domain) := invert(ADomain/nr_OrgEntity);
+
+				//Suitability per landuse type
+				container Suitability :=
+					for_each_nedv(
+						LandUse/name
+						, 'convert(potential(float32(SourceData/Landuse/Predominant == LandUse/V/'+LandUse/name+'), /Geography/Kernels/kernel_100m/relddWeight) * 100f, int32)[ADomain/nr_OrgEntity]'
+						, ADomain
+						, int32
+					);
+					
+				container Suitability_org :=
+					for_each_nedv(
+						LandUse/name
+						, 'convert(potential(float32(SourceData/Landuse/Predominant == LandUse/V/'+LandUse/name+'), /Geography/Kernels/kernel_100m/relddWeight) * 100f, int32)'
+						, NL_grid/domain
+						, int32
+					);
+				
+				//Atomic regions refer to the smallest regions present in the analysis. For example when you use COROP regions and some smaller region set that doesn't align with an aggregation of the latter. 
+				//However, in this case we only use one region set: COROP. And this attribute give a grid representation of the aggregation regions
+				attribute<AggRegio> AtomicRegionMap (ADomain) := AggRegio/per_grid[ADomain/nr_orgEntity]
+				{
+					attribute<AggRegio> id (AggRegio) := id(AggRegio);
+				}
+				
+				container RegionSets :=
+					for_each_nedv(
+						LandUse/name
+						, 'AggRegio/per_grid'
+						, NL_grid/domain
+						, AggRegio
+					);
+			}
+
+			container Claims
+			{
+				container maxclaims := 
+					for_each_nedv(
+						  LandUse/name
+						, 'sum(uint32(SourceData/Landuse/Predominant == LandUse/V/'+LandUse/name+'), AggRegio/per_grid) * 2'
+						, AggRegio
+						, uint32
+					)
+				{
+					attribute<uint32> Totaal (AggRegio) := = 'add('+AsItemList(LandUse/name)+')';
+					parameter<YearDiffRange> ClaimPeriod := 30[YearDiffRange];
+				}
+				
+				container minclaims := 
+					for_each_nedv(
+						  LandUse/name
+						, 'const(0, AggRegio)'
+						, AggRegio
+						, uint32
+					)
+				{
+					attribute<uint32> Totaal (AggRegio) := = 'add('+AsItemList(LandUse/name)+')';
+				}
+				
+			}
+		}
+
+
+		container Allocation
+		{
+			
+			//This partitioning refers to the partioning from the atomic regions, the 'id' defined here is the id from AtomicRegionMap/id.
+			unit<uint8> Partitioning: nrofrows = 1
+			{ 
+			   attribute<string> name   : ['id'];
+			}
+			
+			//This threshold is not used.
+			parameter<int32> threshold := int32(0);
+			
+			//This empty container is not used.
+			container FeasibleSolution;
+
+			//The is the actual discrete allocation function. It uses 11 arguments with strict requirements concerning value type and domain.
+			container Disc_alloc := 
+				discrete_alloc(
+					  LandUse/name									// 1 string 	attribute
+					, Input/Compacted/ADomain								// 2 uint32		unit
+					, Input/Compacted/Suitability							// 3 int32		container
+					, const(0[Partitioning], LandUse)				// 4 uint8		attribute
+					, Partitioning/name								// 5 string		attribute
+					, Input/AggRegio										// 6 uint16		unit
+					, Input/Compacted/AtomicRegionMap						// 7 uint16		attribute
+					, Input/Claims/minclaims								// 8 uint32		container
+					, Input/Claims/maxclaims								// 9 uint32		container
+					, threshold										// 10 int32		parameter
+					, FeasibleSolution								// 11 (empty)	container
+				);
+
+			// issue: result-sub-items are now not visible in the GUI. each reault must be queried explicitly.
+			// This relation shows the discrete allocation result with the correct landuse classes as value type.
+			attribute<LandUse> LandUse_rel(Input/Compacted/ADomain) := Disc_alloc/landuse;
+		}
+	}
+	
+	container Continueous
+	{
+		attribute <LandUse> Result_continueous (NL_grid/domain) := Allocation/Results/Predominant;
+		
+		container Input
+		{
+			unit<uint16> AggRegio := SourceData/Corop;
+		
+			container Suitability :=
+				for_each_nedv(
+					LandUse_Endogeneous/name
+					, '(potential(SourceData/Landuse/Endogeneous/'+LandUse_Endogeneous/name+', /Geography/Kernels/kernel_100m/relddWeight) / 1[Ha] * 10[Eur_m2]) '
+					, NL_grid/domain
+					, Eur_M2
+				);
+		
+			container Claims := 
+				for_each_nedv(
+					  LandUse_Endogeneous/name
+					, 'sum(SourceData/Landuse/Endogeneous/'+LandUse_Endogeneous/name+', AggRegio/per_grid)[Ha] * 0.25f'
+					, AggRegio
+					, Ha
+				)
+			{
+				attribute<Ha> Totaal (AggRegio) := = 'add('+AsItemList(LandUse_Endogeneous/name)+')';
+				parameter<YearDiffRange> ClaimPeriod := 30[YearDiffRange];
+				
+				container Operator
+				{
+					attribute<OperatorType> residential  (AggRegio) := const(1, AggRegio, OperatorType);
+					attribute<OperatorType> otherbuiltup (AggRegio) := const(1, AggRegio, OperatorType);
+					attribute<OperatorType> construction (AggRegio) := const(0, AggRegio, OperatorType);
+					attribute<OperatorType> urbangreen   (AggRegio) := const(1, AggRegio, OperatorType);
+					attribute<OperatorType> agriculture  (AggRegio) := const(0, AggRegio, OperatorType);
+					attribute<OperatorType> nature       (AggRegio) := const(1, AggRegio, OperatorType);
+				}
+			}
+			
+
+		}
+		
+		container Allocation :=
+			AllocatePeriod(
+				  SourceData/Landuse/LU_continuous
+				, SourceData/Landuse/Exogeneous
+				, Input/Suitability
+				, Input/Claims
+				, 30[YearDiffRange]
+				, 100[IterRange]
+				, 1[m2_Eur]
+			);
+
+
+		Template AllocatePeriod
+		{
+			// Begin CaseParameters
+			container orgLanduse        : Descr     = "For the calculation of the TotalClaims (Dj) we need this original landuse of the endogenous types and the additional Claims";
+			container ExogenousLand     : Descr     = "exogenous landuse types";
+			container Suitabilities     : Descr     = "Scj:Suitability maps per cell per endogenous lu-type";
+			container Additional_Claims : Descr     = "Crj: Additional Claims per region per lu-type", using = "geography/RegionalUnits";
+
+			parameter<YearDiffRange> PeriodDuration : Descr     = "Periodelengte (in jaren) waarnaar de claims geinterpoleerd moeten worden (claims zijn voor 2030 bepaald, dus 2030-2000 = 30 jaar)";
+			parameter<IterRange>     nrIter         : Descr     = "Aantal iteraties voor het fitten van de claims met de beschikbare grond. 4 is weinig; als na 25 iteraties nog steeds geen evenwicht is gevonden, zijn de claims wellicht infeasable";
+			parameter<m2_Eur>        betaFactor     : Descr     = "Zie wiskundige beschrijving; hoog (5.0) geeft een scherp beeld na veel iteraties; laag (0.5) geeft meer verdeeld ruimtegebruik";
+			// End CaseParameters
+
+			container CaseData
+			{
+				container Land: Descr = "These attributes are used to describe the freeLand for allocation"
+				{
+					attribute<Ha> TotalLand          (NL_grid/domain) := const(1.0, NL_grid/domain, Ha);
+					attribute<Ha> TotalExogenousLand (NL_grid/domain) := ='add_list('+asItemList('ExogenousLand/' + LandUse_Exogeneous/Name)+')';
+					attribute<Ha> UsedLand           (NL_grid/domain) := min_elem(TotalLand, TotalExogenousLand);
+					attribute<Ha> ExogenousOverflow  (NL_grid/domain) := TotalExogenousLand - UsedLand;
+					attribute<Ha> FreeLand           (NL_grid/domain) := TotalLand - UsedLand, Descr = "Lc = TotalLand - exogenousLand: free allocatable land";
+				}
+
+				parameter<Potentiaal> claimFactor := Float32( PeriodDuration ) / Float32(Additional_Claims/ClaimPeriod), Descr = "Indication of how much of the additional claims must be consumed in this allocation";
+
+				container TotalPeriodClaims :=
+					for_each_nedv(
+						LandUse_Endogeneous/Name
+						, 'max_elem(Additional_Claims/'+LandUse_Endogeneous/Name+'[claimHa] * claimFactor + sum(orgLandUse/'+LandUse_Endogeneous/Name+', Input/AggRegio/per_grid)[claimHa], 0[claimHa])'
+						, Input/AggRegio
+						, claimHa
+					), Descr    = "Dj: Total Claims";
+
+				container Compacted
+				{
+					attribute<bool> HasFreeLand (NL_grid/domain):= Land/TotalExogenousLand < 1[Ha];
+
+					unit <uint32> ADomain := Subset(HasFreeLand)
+					,	DialogType = "Map"
+					,	DialogData = "BaseGrid";
+
+					container SuitabilityMaps :=
+						for_each_nedv(
+							  classifications/LandUse_Endogeneous/label
+							, '(Suitabilities/'+classifications/LandUse_Endogeneous/label+ '[ADomain/nr_orgEntity])[Eur_m2]'
+							, ADomain
+							, EUR_M2
+						);
+						
+					attribute<ADomain> BaseGrid (NL_grid/domain) := invert(ADomain/nr_OrgEntity);
+
+					container Demands :=
+						for_each_nedv(
+							LandUse_Endogeneous/Name
+							, 'value(exp(betaFactor * SuitabilityMaps/'+ LandUse_Endogeneous/Name +'), Units/DemandUnit)'
+							, ADomain
+							, Units/DemandUnit
+						), Descr = "exp(betaFactor * Scj): beta rescaled exponent of suitability maps";
+
+					attribute<input/AggRegio> RegioGrids (ADomain) := input/AggRegio/per_grid[ADomain/nr_orgEntity];
+				}
+
+				// create iterator
+				container iterator := loop(_IterTemplate, nrIter);
+			}
+
+			container Results : Descr = "The resulting landuse is the combination of (casedata/iterator/allocated_landuse) and (exogenousLanduse)"
+			{
+				container ClaimSummary : Descr    = "These parameters indicate of the sum of claims fits the sum of availaible freeLand; which is a neccesary (but not sufficient) condition"
+				{
+					parameter<claimHa> sumClaims     := ='add_list('+asItemList('sum(CaseData/TotalPeriodClaims/'+LandUse_Endogeneous/Name+')')+')';
+					parameter<claimHa> totalLand     := sum(CaseData/Land/TotalLand);
+					parameter<claimHa> usedLand      := sum(CaseData/Land/UsedLand );
+					parameter<claimHa> freeLand      := sum(CaseData/Land/FreeLand);
+					parameter<Bool>    totalClaimsFit:= freeLand >= sumClaims;
+					parameter<claimHa> claimSlack    := max_elem(freeLand - sumClaims, 0[claimHa]);
+					parameter<claimHa> claimExcess   := max_elem(sumClaims- freeLand,  0[claimHa]);
+				}		
+			
+				container Endogenous :=
+					for_each_nedv(
+						  LandUse_Endogeneous/Name
+						, 'casedata/iterator/lastIter/allocated_land/'+LandUse_Endogeneous/Name+'/nrHaPerCell[CaseData/Compacted/BaseGrid]'
+						, NL_grid/domain
+						, Ha
+					)
+				{
+					attribute<Ha> Total(NL_grid/domain):= ='add_list('+asItemList(LandUse_Endogeneous/Name)+')';
+				}
+
+				container Exogenous := 
+					for_each_nedv(
+						  LandUse_Exogeneous/Name
+						, 'exogenousLand/'+LandUse_Exogeneous/Name
+						, NL_grid/domain
+						, Ha
+					)
+				{
+					attribute<Ha> Total(NL_grid/domain):= ='add_list('+asItemList(LandUse_Exogeneous/Name)+')';
+				}
+
+				attribute <Classifications/LandUse> Predominant (NL_grid/domain) := 
+					='convert(
+						argmax(
+							'+asItemList(
+								'MakeDefined(
+									'+ iif(Classifications/LandUse/IsExogeneous
+										,'Exogenous/'
+										,'Endogenous/'
+									   )
+									+ Classifications/LandUse/Name+'
+									, value(0.0, Ha)
+								)
+							')
+						+')
+						, Classifications/LandUse
+					)';
+					
+				container GOF
+				{
+					unit<uint16>          ThisIterRange                      := range(IterRange, 0w , uint16(nrIter));
+					attribute<String>     IterNames (ThisIterRange)          := 'iter'+string(id(ThisIterRange));
+					attribute<claimHa>    TotalDeviations (ThisIterRange)    := ='add('+asItemList('Float32(id(ThisIterRange) == value('+string(id(ThisIterRange))+',ThisIterRange))*casedata/iterator/'+IterNames+'/TotalDeviation')+')';
+					attribute<Potentiaal> LogTotalDeviations (ThisIterRange) := log(TotalDeviations);
+				}
+
+				#include <evaluation.dms>
+
+				container adjustedDemands := 
+					for_each_nedv(
+						  LandUse_Endogeneous/Name
+						, 'casedata/iterator/lastIter/adjusted_demands/'+LandUse_Endogeneous/Name+'[CaseData/Compacted/BaseGrid]'
+						, NL_grid/domain
+						, DemandUnit
+					), Descr = "The resulting adjustedDemands comes from the last iteration; it also contains the total demands"
+				{
+					attribute<DemandUnit> total_demand (NL_grid/domain) := casedata/iterator/lastIter/total_demand[CaseData/Compacted/BaseGrid];
+					attribute<EUR_M2>     land_price   (NL_grid/domain) := log(total_demand / value(1.0, DemandUnit)) / betaFactor;
+		
+					attribute <LandUse_Endogeneous> Dominant_ggEndogenous (NL_grid/domain) := 
+						='iif(CaseData/Land/FreeLand > value(2.5, Ha)
+							, convert(
+								  argmax('
+									+asItemList(LandUse_Endogeneous/Name)+
+								  ')
+								, LandUse_Endogeneous
+							  )
+							, value(0 / 0, LandUse_Endogeneous)
+						)';
+				}
+			}
+		}
+
+		Template _IterAllocatedLand
+		{
+			parameter<LandUse_Endogeneous> ggEndogenousID;
+			unit<uint32>                   Adomain;
+			parameter<String>              ggName                   := lookup(ggEndogenousID, LandUse_Endogeneous/Name);
+			attribute<Ha>                  nrHaPerCell (ADomain)    := ='demand_factor * adjusted_demands/'+ggName, Descr = "Mcj = Bc * Aj * exp(betaFactor*Scj): see formula (3'''')";
+			unit<uint16>                   RegioUnit                := Input/AggRegio;
+			attribute<claimHa>             nrHaPerRegio (RegioUnit) := ='sum (nrHaPerCell, CaseData/Compacted/RegioGrids)', Descr = "Tj= sum ( Mcj (* intensity))";
+			parameter<claimHa>             nrHaAggr                 := sum(nrHaPerRegio);
+
+			attribute<OperatorType> Operator  (RegioUnit):= ='Additional_Claims/Operator/'+ggName;
+			attribute<claimHa>      Deviation (RegioUnit):= ='nrHaPerRegio - CaseData/TotalPeriodClaims/'+ggName;
+			attribute<claimHa2>     SqrDevOrg (RegioUnit):= sqr(Deviation);
+			attribute<claimHa2>     SqrDev    (RegioUnit):= Operator == 0b 
+																? Sqr(max_elem(0[claimHa], Deviation))
+																: Operator == 2b
+																	? Sqr(min_elem(0[claimHa], Deviation))
+																	: Sqr(Deviation);
+		}
+
+		Template _IterTemplate
+		{
+			parameter<IterRange>  i : Descr = "Nr of iterations before this iteration";
+
+			container currValue :=
+				for_each_nedv(
+					LandUse_Endogeneous/Name
+					, 'exp(betaFactor * const(0[EUR_m2], Input/AggRegio))'
+					, Input/AggRegio
+					, float32
+				), Descr = "Aj: This will be initialized with InitialWeigths and then receives a copy of nextValue (Aj) for each iteration";
+
+			unit<uint32> ADomain := .../Compacted/ADomain;
+
+			attribute<float32> test (ADomain) := currValue/residential[CaseData/Compacted/RegioGrids];
+
+			container adjusted_demands :=
+					for_each_nedv(
+						  LandUse_Endogeneous/Name
+						, 'MakeDefined(CaseData/Compacted/Demands/'+LandUse_Endogeneous/Name+' * currValue/'+LandUse_Endogeneous/Name+'[CaseData/Compacted/RegioGrids], 0[DemandUnit])'
+						, ADomain
+						, float32
+					), Descr = "Tcj = Aj * exp(beta*Scj): new demands based on given Aj (currValue)";
+
+			attribute<DemandUnit> total_demand (ADomain) := ='add_list('+asItemList('adjusted_demands/'+LandUse_Endogeneous/Name)+')', Descr = "Tc = sum(j, Tcj): total demand on input"; // for unused land category, add "+'value(1.0, DemandUnit)'"
+
+			attribute<BcUnit>     demand_factor (ADomain) := CaseData/Land/FreeLand[ADomain/nr_orgEntity] / total_demand, Descr = "Bc = Lc / Tc: see formula 6a";
+
+			container allocated_land := 
+				for_each_ne(
+					LandUse_Endogeneous/Name
+					, '_IterAllocatedLand('+String(ID(LandUse_Endogeneous))+ '[uint8], Adomain)' 
+				);
+
+			parameter<claimHa>    TotalDeviation  := ='sqrt(add_list('+asItemList('sum(allocated_land/'+LandUse_Endogeneous/Name+'/SqrDev)')+'))', Descr = "Sum of distances between claimed and allocated sums of ha per region";
+			parameter<claimHa>    AllocatedAggr   := ='add_list('+asItemList('allocated_land/'+LandUse_Endogeneous/Name+'/nrHaAggr')+')';
+			parameter<Bool>       stop            := TotalDeviation < 12000[Ha], Descr = "Stop iteration if the average deviation of the claims is less than 10 square km";
+
+			container nextValue :=
+				for_each_nedv(
+					  LandUse_Endogeneous/Name
+					, 'claim_corrF32(
+							CaseData/TotalPeriodClaims/'+LandUse_Endogeneous/Name+' * currValue/'+LandUse_Endogeneous/Name+'
+							, allocated_land/'+LandUse_Endogeneous/Name+'/nrHaPerRegio
+							, Additional_Claims/Operator/'+LandUse_Endogeneous/Name+')'
+					, Input/AggRegio
+					, float32
+				), Descr    = "Aj' = Aj * Dj/Tj: see formula (6b')";
+		}
+	}
+}
+
+
+
+
