@@ -1,0 +1,110 @@
+container OSM
+{
+	unit<UInt8> roadtype: NrOfRows = 84
+	{
+		attribute<String>       Name                 := Label;
+		attribute<String>       Label                := Elements/Text[value(UInt32(ID(.))* nrAttr + 2, Elements)], DialogType = "LabelText";
+		attribute<bool>         IsPartOfCarNetwork   := bool(Elements/Text[value(UInt32(ID(.))* nrAttr + 3, Elements)]);
+		attribute<bool>         IsPartOfBikeNetwork  := bool(Elements/Text[value(UInt32(ID(.))* nrAttr + 4, Elements)]);
+		attribute<bool>         IsPartOfPedestrianNetwork := !(Label = 'motorway' || Label = 'motorway_link' || Label = 'trunk' || Label = 'trunk_link');
+	
+		parameter<uint32> nrAttr := 5;
+		unit<UInt32> Elements := Range(uint32, 0, nrAttr*#.)
+		{
+			attribute<String> Text:
+			[
+				//IsMain, group,Label, IsCarNetwork, IsBikeNetwork
+				'True' ,'2','access'               ,'TRUE' ,'TRUE' ,
+				'False','2','binnenweg'            ,'TRUE' ,'TRUE' ,
+				'False','0','bridleway'            ,'FALSE','TRUE' ,
+				'False','3','bus_guideway'         ,'FALSE','TRUE' ,
+				'False','3','bus_stop'             ,'FALSE','FALSE',
+				'False','5','closed'               ,'FALSE','FALSE',
+				'False','4','construction'         ,'FALSE','FALSE',
+				'False','2','crossing'             ,'FALSE','FALSE',
+				'False','1','cycleway'             ,'FALSE','TRUE' ,
+				'False','1','cycleway;service'     ,'FALSE','TRUE' ,
+				'False','5','disused'              ,'FALSE','FALSE',
+				'False','0','dog track'            ,'FALSE','FALSE',
+				'False','2','driveway'             ,'FALSE','FALSE',
+				'False','1','fi'                   ,'FALSE','TRUE' ,
+				'False','1','fiets-/voetpad'       ,'FALSE','TRUE' ,
+				'False','3','FIXME'                ,'FALSE','FALSE',
+				'False','0','footpath'             ,'FALSE','FALSE',
+				'False','0','footway'              ,'FALSE','FALSE',
+				'False','2','gate'                 ,'FALSE','FALSE',
+				'False','2','living_street'        ,'TRUE' ,'TRUE' ,
+				'False','2','local'                ,'TRUE' ,'TRUE' ,
+				'False','2','minor'                ,'TRUE' ,'TRUE' ,
+				'False','0','Molenpad'             ,'FALSE','TRUE' ,
+				'True', '2','motorway'             ,'TRUE' ,'FALSE',
+				'True', '2','motorway_link'        ,'TRUE' ,'FALSE',
+				'False','5','no_track_anymore'     ,'FALSE','FALSE',
+				'False','0','pah'                  ,'FALSE','FALSE',
+				'False','0','pat'                  ,'FALSE','FALSE',
+				'False','0','path'                 ,'FALSE','FALSE',
+				'False','0','pedestrian'           ,'FALSE','FALSE',
+				'False','3','platform'             ,'FALSE','FALSE',
+				'True', '2','primary'              ,'TRUE' ,'TRUE' ,
+				'True', '2','primary_link'         ,'TRUE' ,'TRUE' ,
+				'False','2','private'              ,'FALSE','FALSE',
+				'False','4','proposed'             ,'FALSE','FALSE',
+				'False','2','race_track'           ,'FALSE','FALSE',
+				'False','2','raceway'              ,'FALSE','FALSE',
+				'False','5','removed?'             ,'FALSE','FALSE',
+				'False','2','res'                  ,'TRUE' ,'TRUE' ,
+				'False','2','residential'          ,'TRUE' ,'TRUE' ,
+				'False','2','residential;uncl'     ,'TRUE' ,'TRUE' ,
+				'False','2','rest_area'            ,'TRUE' ,'FALSE',
+				'False','2','road'                 ,'TRUE' ,'TRUE' ,
+				'True', '2','secondary'            ,'TRUE' ,'TRUE' ,
+				'True', '2','secondary_link'       ,'TRUE' ,'TRUE' ,
+				'False','2','service'              ,'TRUE' ,'TRUE' ,
+				'False','2','service; unclass'     ,'TRUE' ,'TRUE' ,
+				'False','2','services'             ,'TRUE' ,'TRUE' ,
+				'False','3','stairs'               ,'FALSE','FALSE',
+				'False','3','steps'                ,'FALSE','FALSE',
+				'False','2','tertiary'             ,'TRUE' ,'TRUE' ,
+				'False','2','tertiary;unclass'     ,'TRUE' ,'TRUE' ,
+				'False','2','tertiary_link'        ,'TRUE' ,'TRUE' ,
+				'False','2','track'                ,'FALSE','FALSE',
+				'False','3','traffic_signals'      ,'FALSE','FALSE',
+				'False','0','trail'                ,'FALSE','FALSE',
+				'True', '2','trunk'                ,'TRUE' ,'FALSE',
+				'True', '2','trunk_link'           ,'TRUE' ,'FALSE',
+				'False','2','turning_circle'       ,'TRUE' ,'TRUE' ,
+				'True', '2','unclassified'         ,'TRUE' ,'TRUE' ,
+				'False','2','undefined'            ,'TRUE' ,'TRUE' ,
+				'False','0','unpaved'              ,'TRUE' ,'TRUE' ,
+				'False','2','unpaved road'         ,'TRUE' ,'TRUE' ,
+				'False','0','unsurfaced'           ,'TRUE' ,'TRUE' ,
+				'False','3','virtual'              ,'FALSE','FALSE',
+				'False','1','walkway'              ,'FALSE','FALSE',
+				'False','1','Weddeloop'            ,'FALSE','FALSE',
+				'False','3','ún'                   ,'FALSE','FALSE',
+				'False','3','texel_ferry'          ,'TRUE' ,'TRUE' ,
+				'False','3','connectlink'          ,'TRUE' ,'TRUE' ,
+				'False','3','riverferry'           ,'TRUE' ,'TRUE' ,
+				'False','3','vlieland_ferry'       ,'TRUE' ,'TRUE' ,
+				'False','3','vlieland_terschelling','TRUE' ,'TRUE' ,
+				'False','3','terschelling_ferry'   ,'TRUE' ,'TRUE' ,
+				'False','3','ameland_ferry'        ,'TRUE' ,'TRUE' ,
+				'False','3','schiermonnikoog_ferry','TRUE' ,'TRUE' ,
+				'False','3','ferry'                ,'TRUE' ,'TRUE' ,
+				'True' ,'2','motorway_abroad'      ,'TRUE' ,'FALSE',
+				
+				
+				'False' ,'2','track_grade1'        ,'FALSE','FALSE',
+				'False' ,'2','track_grade2'        ,'FALSE','FALSE',
+				'False' ,'2','track_grade3'        ,'FALSE','FALSE',
+				'False' ,'2','track_grade4'        ,'FALSE','FALSE',
+				'False' ,'2','track_grade5'        ,'FALSE','FALSE',
+				'False' ,'2','unknown'             ,'FALSE','FALSE'
+			];
+		}
+		
+		container V := for_each_nedv(replace(name,';','','ú','u',' ','_','-','_','?','','/',''), String(ID(.))+'[..]', void, .);
+	}
+}
+
+

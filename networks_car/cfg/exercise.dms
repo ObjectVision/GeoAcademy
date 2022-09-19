@@ -1,0 +1,33 @@
+container GeoDMS_Academy_Network_Car
+{     
+	container Units
+	{
+		unit<float32> m          := baseunit('m', float32) , label = "meter";
+		unit<float32> km         := 1000f * m;
+		unit<float32> s          := baseunit('s', float32) , label = "second";
+		unit<float32> min        := 60.0 * s               , label = "minute";
+		unit<float32> hr         := 60.0 * min             , label = "hour";
+		unit<float32> m_s        := m / s                  , label = "meter per seconde";
+		unit<float32> km_hr      := km / hr                , label = "kilometer per hour";
+	}
+	
+	container classifications : using = "units"
+	{
+		#include <classifications.dms>
+	}
+	
+	container Geography: Using = "Units"
+	{
+		unit<fpoint> rdc_base : Format   = "EPSG:28992", DialogData = "ngr_layer";
+		unit<fpoint> rdc     := range(rdc_base, point(0f,300000f), point(280000f,625000f));
+		
+		#include<ngr_layer.dms>
+	}	
+	
+	container SourceData: Using = "Units;Geography"
+	{
+	}	
+	
+	#include <results.dms>
+	#include <templates.dms>
+}

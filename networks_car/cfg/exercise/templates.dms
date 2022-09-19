@@ -1,0 +1,98 @@
+container Templates : using = "units;Classifications;geography"
+{ 
+	Template MakeNetwork
+	{
+		// begin case parameters
+		unit<uint32>      orgDomain;
+		unit<uint32>      destDomain;
+		unit<uint32>      roadDomain;
+
+		attribute<rdc>    orgLocations  (orgDomain);
+		attribute<rdc>    destLocations (destDomain);
+		attribute<rdc>    roads         (arc, roadDomain);
+		parameter<string> network_type;
+		// end case parameters
+		
+		container MakeConnectedRoads
+		{
+			attribute<rdc>  first_point (roadDomain) := first_node(roads);
+			attribute<rdc>  last_point  (roadDomain) := last_node(roads);
+			
+			unit<uint32> Pointset := union_unit(roadDomain, roadDomain)
+			{
+				attribute<rdc>        Point         := union_data(., ../first_point, ../last_point);
+				attribute<roadDomain> SequenceNr    := value(id(.) % nrofrows(roadDomain), roadDomain);
+			}
+			
+			unit<uint32> NodeSet := unique(Pointset/Point);
+
+			attribute<NodeSet> F1 (roadDomain)  := rlookup(first_point, NodeSet/Values);
+			attribute<NodeSet> F2 (roadDomain)  := rlookup(last_point,  NodeSet/Values);
+
+			unit<uint32> Networks := connected_parts(F1, F2)
+			{
+				attribute<uint32>   NrOfNodes    := sum(const(1, NodeSet), PartNr);
+				parameter<uint32>   MaxNrOfNodes := max(NrOfNodes);
+				parameter<.>        Main         := rlookup(MaxNrOfNodes, NrOfNodes); // we assume that the network with the most nodes is the main network.
+			}
+			
+			unit<uint32> NodesNotConnected := Subset(networks/partnr <> networks/main)
+			{
+				attribute<rdc> Point := NodeSet/Values[Nr_OrgEntity];
+			}
+			
+			attribute<bool> IsConnected (roadDomain) := isNull(rlookup(Pointset/point, NodesNotConnected/point))[invert(Pointset/SequenceNr)];
+			
+			unit<uint32> Result := Subset(IsConnected)
+			{
+				attribute<rdc>           line (arc)          := roads[nr_OrgEntity];
+				attribute<OSM/roadtype>  roadtype            := roadDomain/wegtype[nr_OrgEntity];
+				attribute<km_hr>         max_speed           := roadDomain/max_speed[nr_OrgEntity];
+			}
+		}
+		
+		container OrgToDest
+		{
+			unit<uint32> Locations := union_unit(orgDomain, destDomain)
+			{
+				attribute<rdc> Values := union_data(., orgLocations, destLocations);
+				
+			}
+			unit<uint32> UniqueLocation := unique(Locations/values);
+
+			unit<uint32> RoadsWithLocations := connect(MakeConnectedRoads/result/line, OrgToDest/UniqueLocation/values)
+			,	DialogData = "uniondata"
+			,	DialogType = "Map"
+			{
+				attribute<OSM/roadtype>  roadtype         := MakeDefined(MakeConnectedRoads/result/roadtype[nr_OrgEntity], value(69,OSM/roadtype));
+				attribute<km_hr>         max_speed        := IsDefined(MakeConnectedRoads/result/max_speed[nr_OrgEntity]) ? MakeConnectedRoads/result/max_speed[nr_OrgEntity] : 25[km_hr];
+			}
+
+			unit <uint32> LinkSet := arc2segm(RoadsWithLocations/UnionData)
+			,	DialogData = "segments"
+			,	DialogType = "Map"
+			{
+				attribute<rdc>           segments (arc)               := points2sequence(PointSet/Point, PointSet/SequenceNr, PointSet/Ordinal);
+				attribute<km_hr>         max_speed                    := RoadsWithLocations/max_speed[SequenceNr];
+				attribute<OSM/roadtype>  roadtype                     := RoadsWithLocations/roadtype[SequenceNr];
+				attribute<s>             impedance_link               := arc_length(segments, m) / value(max_speed, m_s);
+				
+				unit<uint32> PointSet := Union_Unit(LinkSet, LinkSet)
+				{
+					attribute<rdc>         Point      := Union_Data(., LinkSet/point, LinkSet/nextpoint);
+					attribute<LinkSet>     SequenceNr := value(id(.) % nrofrows(LinkSet), LinkSet);
+					attribute<uint32>      Ordinal    := id(.) / nrofrows(LinkSet);
+				}
+			}
+			
+			unit<uint32> NodeSet  := unique(LinkSet/PointSet/Point);
+			
+			attribute<NodeSet> F1 (LinkSet)              := rlookup(LinkSet/Point,     NodeSet/Values);
+			attribute<NodeSet> F2 (LinkSet)              := rlookup(LinkSet/nextpoint, NodeSet/Values);
+
+			attribute<s>       impedance   (LinkSet)     := abs(LinkSet/impedance_link);
+			attribute<NodeSet> nr_orgNode  (orgDomain)   := rlookup(orgLocations, NodeSet/Values);
+			attribute<NodeSet> nr_destNode (destDomain)  := rlookup(destLocations, NodeSet/Values);
+		}
+	}
+}
