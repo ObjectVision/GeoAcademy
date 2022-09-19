@@ -1,0 +1,35 @@
+container GeoDMS_Academy_Grids
+{
+	container Units
+	{
+		unit<float32> m          := baseunit('m', float32) ,label = "meter";
+		unit<float32> cm         := 0.01 * m               ,label = "centimeter";
+		unit<uint16>  cm_uint16  := uint16(cm)             ,label = "centimeter uint16";
+	}
+	
+	#include <geography.dms>
+	
+	container SourceData: Using = "Units;Geography"
+	{
+		container AHN 
+		{
+			attribute<cm_uint16> AHN3_Hulst_int (grid_05m/domain) : StorageName = "%ProjDir%/Data/AHN3_Hulst_int.tif";
+			attribute<cm_uint16> AHN3_Hulst_ruw (grid_05m/domain) : StorageName = "%ProjDir%/Data/AHN3_Hulst_ruw.tif";
+		}
+		
+		container BAG
+		{
+			unit<uint32> pand_plus
+			:	StorageName = "%ProjDir%/Data/BAG_Hulst.gpkg"
+			, 	StorageType = "gdal.vect"
+			,	StorageReadOnly = "True"
+			{
+				attribute<rdc>    geometry (poly);
+				attribute<string> identificatie;
+				attribute<rdc>    centroid       := centroid_or_mid(geometry);
+			}
+		}
+	}	
+	
+	#include <results.dms>
+}

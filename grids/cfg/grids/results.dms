@@ -1,0 +1,64 @@
+container Results : Using = "Units;SourceData;Geography"
+{
+	unit<uint32> Building_height := subset(IsDefined(SourceData/BAG/pand_plus/identificatie))
+	,	DialogType = "Map"
+	,	DialogData = "geometry"
+	{
+		attribute<rdc>   geometry (polygon)         := SourceData/BAG/pand_plus/geometry[nr_OrgEntity];
+		attribute<cm_uint16>  height_building            := Determine_heights/height/building;
+		attribute<cm_uint16>  height_ridge               := Determine_heights/height/ridge;
+		attribute<cm_uint16>  height_ground              := Determine_heights/height/impl/offset_ground;
+		
+		container Determine_heights
+		{
+			attribute<Building_height> building_grid_rel (grid_05m/domain) := poly2grid(Building_height/geometry, grid_05m/domain);
+
+			container height
+			{
+				container impl
+				{
+					attribute<cm_uint16> offset_building     (Building_height) := rth_element(AHN/AHN3_Hulst_ruw                         , 0.7f , building_grid_rel);
+					attribute<cm_uint16> offset_ridge        (Building_height) := rth_element(AHN/AHN3_Hulst_ruw                         , 0.9f , building_grid_rel);
+					attribute<cm_uint16> offset_ground       (Building_height) := rth_element(building_buffer/buffer_points/ground_offset, 0.15f, building_buffer/buffer_points/building_grid_rel);
+				}
+
+				attribute<cm_uint16> building (Building_height) := (isDefined(impl/offset_building) && isDefined(impl/offset_ground) && (impl/offset_building > impl/offset_ground))
+																	? (impl/offset_building - impl/offset_ground)
+																	: (0 / 0)[cm_uint16];
+				attribute<cm_uint16> ridge    (Building_height) := (isDefined(impl/offset_ridge) && isDefined(impl/offset_ground) && (impl/offset_ridge > impl/offset_ground))
+																	? (impl/offset_ridge - impl/offset_ground)
+																	: (0 / 0)[cm_uint16];
+			}
+			
+			container building_buffer
+			{
+				// grid buffers used for determining ground level offset
+				// proximity creates a buffer of cells around each building based on the specified kernel
+				attribute<float32>            proximity_arg        (grid_05m/domain) := float32(building_grid_rel) + 1f;    // + 1 is need because otherwise the proximity to building 0 would be the same as the hinterlands
+				attribute<float32>            proximity            (grid_05m/domain) := proximity(proximity_arg, kernel_buffer/distMatr);
+				attribute<Building_height>    building_with_buffer (grid_05m/domain) := (proximity - 1f)[Building_height];
+				attribute<Building_height>    buffer               (grid_05m/domain) := isDefined(building_grid_rel) ? (0 / 0)[Building_height] : building_with_buffer;
+
+				unit<uint32> buffer_points := Subset(isDefined(buffer) && isDefined(AHN/AHN3_Hulst_int))
+				,	DialogType = "Map"
+				,	DialogData = "point"
+				{
+					attribute<rdc>         point             := nr_OrgEntity[rdc];
+					attribute<Building_height>  building_grid_rel := buffer[nr_OrgEntity];
+					attribute<cm_uint16>        ground_offset     := AHN/AHN3_Hulst_int[nr_OrgEntity];
+				}
+			}
+		}
+	}
+
+	unit<uint32> Distance := subset(IsDefined(SourceData/BAG/pand_plus/identificatie))
+	,	DialogType = "Map"
+	,	DialogData = "geometry"
+	{
+		attribute<rdc>         geometry                          := SourceData/BAG/pand_plus/centroid[nr_OrgEntity];
+		attribute<grid_10m/domain>  grid_rel                          := geometry[grid_10m/domain];
+		attribute<m>                DistTo          (grid_10m/domain) := GridDist(resistance_grid, grid_rel, const(0, ., m));
+		
+		attribute<m>                resistance_grid (grid_10m/domain) := const(10, grid_10m/domain, m);
+	}
+}
