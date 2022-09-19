@@ -1,0 +1,9 @@
+container GeoDMS_Academy_Tables
+{
+	#include <units.dms>
+	#include <classifications.dms>
+	#include <geography.dms>
+	#include <sourcedata.dms>
+	#include <analysis.dms>
+	#include <calculationschemes.dms>
+}

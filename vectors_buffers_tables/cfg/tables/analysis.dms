@@ -1,0 +1,35 @@
+container Analysis : Using = "Units;geography"
+{
+	Container Make_Buffers_per_Station :=
+	for_each_ne(
+		classifications/metro_stations/name
+		, 'CalculationSchemes/buffers/Make_Buffers('+quote(classifications/metro_stations/name)+', SourceData/Stations/per_Station/' + string(classifications/metro_stations/name) + '/subset)'
+	);
+	
+	container Is500m := 
+		for_each_nedv(
+			classifications/metro_stations/name
+			, 'point_in_polygon(sg_points/geometry, Make_Buffers_per_Station/'+classifications/metro_stations/name+'/radius/buff_500m/buffer_diss)' 
+			, sg_points
+			, bool
+		);
+
+	container MeanPerStation := 
+		for_each_ne(
+			classifications/metro_stations/name
+			, 'CalculationSchemes/MeanPerStation_T('+quote(classifications/metro_stations/name)+')'
+		);
+	
+	container MeanPerStationTransposed :=
+		for_each_nedv(
+			classifications/metro_stations/name
+			, 'union_data(classifications/years, '
+						+replace(
+							 AsItemList('MeanPerStation/@ST@/mean_500m/'+classifications/years/name)
+						,'@ST@', classifications/metro_stations/Name)+')'
+			, classifications/years
+			, float32
+		);
+	
+	
+}

@@ -1,0 +1,9 @@
+container Units
+{
+	unit<float32>  		m               := baseunit('m', float32);
+	unit<float32>   	m2            	:= m * m;
+	unit<int32>     	nrhouses;
+	unit<float32>  		ha           	:= 10000f * m2;
+	unit<float32>   	nrhouseha       := nrhouses / ha;
+}
+

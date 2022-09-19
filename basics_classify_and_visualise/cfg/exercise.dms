@@ -1,0 +1,35 @@
+container basics_classify_and_visualise_exercise
+{
+	container Units
+	{
+		unit<float32> nr_inh := baseunit('inhabitants', float32), Descr = "values unit for number of inhabitants";
+	}
+
+	container Geography
+	{
+		unit<fpoint> rdc_base : format = "EPSG:28992", DialogData = "ngr_layer",               Descr = "base unit for coordinates";
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f)), Descr = "rdc coordinates unit";
+
+		#include<ngr_layer.dms> // For WMS visualisation of background layer
+	}
+
+	container Classifications: Using = "Units"
+	{
+	}
+
+	container SourceData: Using = "Units"
+	{
+		unit<uint32> province
+		:	StorageName     = "%ProjDir%/Data/provincie_extra.shp"
+		,	StorageType     = "gdal.vect"
+		,	StorageReadOnly = "True"
+		{
+			attribute<Geography/rdc> geometry (poly);
+			attribute<string>        naam;
+			attribute<string>        label:= naam;
+			attribute<nr_inh>        inwoners;
+			attribute<uint8>         landsdeelc;
+			attribute<string>        ligging;
+		}
+	}
+}

@@ -1,0 +1,7 @@
+container Units
+{
+	unit<float32>  m     := baseunit('m', float32);
+	unit<float32>  m2    := m * m;
+	unit<uint16>   year  := baseunit('year', uint16);
+}
+

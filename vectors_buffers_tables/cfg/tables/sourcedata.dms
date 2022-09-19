@@ -1,0 +1,47 @@
+container SourceData : using = "Units;geography;Classifications"
+{
+	container Stations
+	{
+		unit<uint32> NZL_stations
+		:	StorageName = "%ProjDir%/Data/Station_locaties.shp"
+		,	StorageType = "gdal.vect"
+		,	StorageReadOnly = "True"
+		,	DialogData = "geometry"
+		,	DialogType = "map"
+		{
+			attribute<geography/rdc> 	geometry;	
+			attribute<float32>          x                               := PointCol(geometry);
+			attribute<float32>          y                               := PointRow(geometry);
+			attribute<NL_grid/domain>   NL_grid_domain_rel		        := geometry[NL_grid/domain];
+			
+			attribute<string>           Station_naam                    := Metrostati;
+			attribute<string>           name                            := replace(Station_naam, ' ', '_', 'Centraal_Station', 'Station_Centraal');
+			attribute<uint8>            station_rel                     := rlookup(name, classifications/metro_stations/name);
+		}
+		
+		container per_Station := 
+			for_each_ne(
+				classifications/metro_stations/name
+				, 'Calculationschemes/Make_per_Stations('+quote(classifications/metro_stations/name)+')'
+				);
+	}
+	
+	unit<uint32> HousingDensity 
+	:	StorageName  = "%ProjDir%/Data/CBSVierkanten.fss"
+	,	StorageReadOnly = "True"
+	{
+		attribute<nrhouseha>              woningen2000 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2001 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2002 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2003 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2004 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2005 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2006 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2007 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2008 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2009 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2010 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2011 (NL_grid/domain);
+		attribute<nrhouseha>              woningen2012 (NL_grid/domain);
+	}
+}

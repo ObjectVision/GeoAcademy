@@ -1,0 +1,111 @@
+container GeoDMS_Academy_Point
+{
+	container Units
+	{
+		unit<float32> m          := baseunit('m', float32) , label = "meter";
+		unit<float32> km         := 1000f * m;
+		unit<float32> s          := baseunit('s', float32) , label = "second";
+		unit<float32> min        := 60.0 * s               , label = "minute";
+		unit<float32> hr         := 60.0 * min             , label = "hour";
+		unit<float32> m_s        := m / s                  , label = "meter per seconde";
+		unit<float32> km_hr      := km / hr                , label = "kilometer per hour";
+		unit<float32> ratio;
+	}
+	
+	container classifications : using = "units"
+	{
+		unit<uint8> metro_stations: NrOfRows = 8
+		{
+			parameter<uint8> nrAttr := 2b;
+			unit<uint8> elem := range(uint8, 0b, nrAttr *#metro_stations[uint8])
+			{
+				attribute<string> values: [ 
+				//'station_name','bestaand'
+				 'Station Noord',         'False'
+				,'Station Noorderpark',   'False'
+				,'Station Centraal',      'True'
+				,'Station Rokin',         'False'  
+				,'Station Vijzelgracht',  'False' 
+				,'Station De Pijp',       'False'  
+				,'Station Europaplein',   'False'
+				,'Station Zuid',          'True' 
+				];
+			}
+			attribute<.> id                   := id(.);
+			attribute<string> label           := name, DialogType = "LabelText"; 
+			attribute<string> station_name    := elem/values[value(id * nrAttr + 0b, elem)];
+			attribute<string> name            := replace(station_name, ' ', '_');
+			
+			container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+		}
+	}
+	
+	#include <geography.dms>
+	
+	container SourceData: Using = "Units;Geography"
+	{
+		unit<uint32> NZL_metrostations
+		:	StorageName = "%ProjDir%/Data/Station_locaties.shp"
+		,	StorageType = "gdal.vect"
+		,	StorageReadOnly = "True"
+		,	DialogData = "geometry"
+		,	DialogType = "map"
+		,	SyncMode = "None"
+		{
+			attribute<geography/rdc> 	geometry;	
+			attribute<float32>          x                               := PointCol(geometry);
+			attribute<float32>          y                               := PointRow(geometry);
+			attribute<string>           Metrostati;
+			
+			attribute<string>           Station_naam                    := Metrostati;
+			attribute<string>           name                            := replace(Station_naam, ' ', '_', 'Centraal_Station', 'Station_Centraal');
+			attribute<uint8>            station_rel                     := rlookup(name, classifications/metro_stations/name);
+		}
+		
+		unit<uint32> Primary_Schools_Amsterdam
+		:	DialogData  = "geometry"
+		,	DialogType  = "Map"
+		,	StorageName = "%ProjDir%/data/Basisscholen_Amsterdam.fss"
+		,	StorageReadOnly = "True"
+		{
+			attribute<rdc>              geometry;
+			attribute<.>                municipality_rel                := point_in_polygon(geometry, Municipalities/geometry);
+		}
+		
+		unit<uint32> Municipalities
+		:	DialogData  = "geometry"
+		,	DialogType  = "Map"
+		,	StorageName = "%ProjDir%/data/Gemeenten_Aggl_Amsterdam.fss"
+		,	StorageReadOnly = "True"
+		{
+			attribute<rdc>    geometry (poly);
+			attribute<string> label;
+		}
+	}
+	
+	container Analysis
+	{
+		container Euclidian_Distance_School_to_Metro
+		{
+			attribute<geography/rdc>                          Schools                 (SourceData/Primary_Schools_Amsterdam) := SourceData/Primary_Schools_Amsterdam/geometry;
+			attribute<geography/rdc>                          Stations                (SourceData/NZL_metrostations)         := SourceData/NZL_metrostations/geometry;
+			
+			//Make sure that the point sets do not have identical x/y combinations. If you do have duplicates, remove them first using the unique operator.
+			//This connect operator finds the closest metro station for each school.
+			attribute<SourceData/Primary_Schools_Amsterdam>   Schools_Stations_rel    (SourceData/Primary_Schools_Amsterdam) := connect(Stations, SourceData/Primary_Schools_Amsterdam/geometry);
+			
+			attribute<float32>            x_stations    (SourceData/Primary_Schools_Amsterdam)    := PointCol(Stations)[Schools_Stations_rel];
+			attribute<float32>            y_stations    (SourceData/Primary_Schools_Amsterdam)    := PointRow(Stations)[Schools_Stations_rel];
+			attribute<float32>            x_schools     (SourceData/Primary_Schools_Amsterdam)    := PointCol(Schools);
+			attribute<float32>            y_schools     (SourceData/Primary_Schools_Amsterdam)    := PointRow(Schools);
+			attribute<float32>            delta_x       (SourceData/Primary_Schools_Amsterdam)    := abs(x_stations - x_schools)^2f;
+			attribute<float32>            delta_y       (SourceData/Primary_Schools_Amsterdam)    := abs(y_stations - y_schools)^2f;
+			attribute<float32>            dist          (SourceData/Primary_Schools_Amsterdam)    := sqrt(delta_x + delta_y);
+		}
+	
+		container Count_Schools_per_Municipality
+		{	
+			attribute<uint32>  count (SourceData/Municipalities) := count(SourceData/Primary_Schools_Amsterdam/geometry, SourceData/Primary_Schools_Amsterdam/municipality_rel);
+		}
+	}
+}

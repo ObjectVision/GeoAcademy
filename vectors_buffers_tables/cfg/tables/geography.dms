@@ -1,0 +1,54 @@
+container Geography: using = "units"
+{
+	unit<fpoint> rdc_base
+	:	Format     = "EPSG:28992"
+	, 	DialogData = "ngr_layer"; // wms achtergrondlaag voor kaarten met rd coordinaten
+	unit<fpoint> rdc     := range(rdc_base, point(110000f,475000f), point(135000f,500000f));
+	unit<ipoint> rdc_mm  := gridset(rdc, point(0.001,0.001), point(0.0, 0.0), ipoint);
+	
+	#include <ngr_layer.dms>
+
+	unit<uint32> sg_points := Subset(isDefined(NL_grid/domain/point_rd))
+	,	DialogData = "geometry"
+	,	DialogType = "map"
+	{
+		attribute<geography/rdc> 	geometry  := NL_grid/domain/point_rd[nr_OrgEntity];	
+		
+		attribute<float32>          x         := PointCol(geometry);
+		attribute<float32>          y         := PointRow(geometry);
+		
+		attribute<NL_grid/domain>   NL_grid_domain_rel  := geometry[NL_grid/domain];	
+	}
+	
+	container NL_grid:  Using = "Units;geography"
+	{
+		parameter<m> gridsize     := 100[m];
+
+		parameter<m> x_min := 110000[m];
+		parameter<m> x_max := 135000[m];
+		parameter<m> y_min := 475000[m];
+		parameter<m> y_max := 500000[m];
+
+		parameter<int16> nr_cols := int16((x_max - x_min) / gridsize);
+		parameter<int16> nr_rows := int16((y_max - y_min) / gridsize);
+
+		unit<spoint> domain :=
+			range(
+				 gridset(
+					 rdc
+					,point(gridsize, -gridsize, geography/rdc)
+					,point(x_min, y_max, geography/rdc)
+					,spoint
+				)
+				,point(0s, 0s)
+				,point(nr_cols, nr_rows)
+			)
+		,	DialogData = "geography/rdc"
+		,	DialogType = "map"
+		{
+			attribute<.>               id            := id(.);
+			attribute<geography/rdc>   point_rd      := id[geography/rdc] + point(0.5f * gridsize, -0.5f * gridsize, geography/rdc);
+			attribute<uint32>          identificatie := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * 250);
+		}
+	}
+}

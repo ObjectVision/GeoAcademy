@@ -1,0 +1,67 @@
+container basics_understanding_units_result
+{
+	container Units // Definition of value units
+	{
+		unit<float32> nr_inh := baseunit('inhabitants', float32);
+
+		unit<float32> m      := baseunit('meter', float32);
+		unit<float32> km     := 1000 * m;
+
+		unit<float32> s      := baseunit('second', float32);
+		unit<float32> hr     := 3600 * s;
+
+		unit<float32> km_hr  := km / hr;
+	}
+
+	container Geography // Define the extend of the scene and the projection 
+	{
+		unit<fpoint> rdc_base : format = "EPSG:28992", DialogData = "ngr_layer";               // Rijksdriehoekstelsel, a 2D cartesian coordinate system for the netherlands
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f)); // Define a 2D range consisting of 2D cartesian coordinates, later used for the "province" domain unit geometry attribute
+
+		#include<ngr_layer.dms>                                                                // Tiles for background layer
+	}
+
+	container Classifications: Using = "Units" // Container with classification rules for visualization. Using the "Units" container namespace
+	{
+		unit<uint8> province_size: nrofrows = 3 // Domain unit with three rows
+		{
+			attribute<nr_inh> ClassBreaks: [      0, 1000000  ,2000000];                                        // Set classbreaks at given intervals of inhabitants
+			attribute<string> label:       ['small', 'medium' ,'large'];                                        // Semantic labels
+			attribute<uint32> BrushColor:  [rgb(0,255,0),rgb(0,0,255),rgb(255,0,0)], DialogType = "BrushColor"; // Use colors: Green, Blue, Red
+		}
+	}
+
+	container SourceData: Using = "Units"
+	{
+		unit<uint32> highway                                            // Domain unit highway, dimensions allocated based on "Motorway_Amsterdam.fss" containing highways in Amsterdam 
+		:	StorageName     = "%ProjDir%/Data/Motorway_Amsterdam.fss"   // Path to fss file
+		,	StorageReadOnly = "True"                                    // We will not be editting the underlying fss file
+		{
+			attribute<Geography/rdc> geometry (arc);                    // Obtained geometry from the "Motorway_Amsterdam.fss" file
+		}
+
+		unit<uint32> province                                // Domain unit province, dimensions and attributes allocated based on the "provincie.shp" file:
+		:	StorageName     = "%ProjDir%/Data/provincie.shp" // Path to shapefile (2D spatial dataset + N attributes)
+		,	StorageType     = "gdal.vect"                    // Type of file to read
+		,	StorageReadOnly = "True"                         // We will not be editting the underlying shapefile
+		{
+			attribute<Geography/rdc> geometry (poly);        // Obtained from the "provincie.shp" geometry
+			attribute<string>        naam;                   // Obtained from "provincie.dbf [NAAM]"
+			attribute<string>        label := naam;
+			attribute<nr_inh>        inwoners: cdf = "Classifications/province_size/ClassBreaks"; // Obtained from "provincie.dbf [INWONERS]", using visualization based on classes defined in Classification container
+		}
+	}
+
+	container Results: Using = "Units"
+	{
+		container highway
+		{
+			parameter<km_hr> speed := 100[km_hr];                                                           // Parameter defining the assumed travel speed of vehicles using the Highway
+
+			attribute<m>  length_m      (SourceData/highway) := arc_length(SourceData/highway/geometry, m); // Calculate the length of the highway segments in meter
+			attribute<km> length_km     (SourceData/highway) := length_m[km];                               // Convert the length of highway segments from meter to kilometer
+			attribute<hr> traveltime_hr (SourceData/highway) := length_km / speed;                          // Calculate the traveltime per highway segment in hours
+			attribute<s>  traveltime_s  (SourceData/highway) := traveltime_hr[s];                           // Convert the traveltime per highway segment to seconds
+		}
+	}
+}

@@ -1,0 +1,32 @@
+container basics_understanding_units_exercise
+{
+	container Units
+	{
+	}
+
+	container Geography
+	{
+		unit<fpoint> rdc_base : format = "EPSG:28992", DialogData = "ngr_layer";
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f));
+
+		#include<ngr_layer.dms>
+	}
+
+	container Classifications
+	{
+	}
+
+	container SourceData
+	{
+		unit<uint32> highway
+		:	StorageName     = "%ProjDir%/Data/Motorway_Amsterdam.fss"
+		,	StorageReadOnly = "True"
+		{
+			attribute<Geography/rdc> geometry (arc);
+		}
+	}
+
+	container Results
+	{
+	}
+}

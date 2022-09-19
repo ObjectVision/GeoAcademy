@@ -1,0 +1,70 @@
+// **************************************************************************************************************//
+//                                                                                                               //
+//                       GeoDMS Academy, Basic Buffer Operations, January, 2021                                  //
+//                                                                                                               //
+// The GeoDMS Academy configuarations are used to get familiar with the GeoDMS syntax and to assist users        //
+// with specific tasks                                                                                           //
+//                                                                                                               //
+// For more information, see: https://www.geodms.nl/Configuration_examples, section: full configuration examples //
+//                                                                                                               //
+// This configuration shows how to make buffers for point, arc and polygon data with the GeoDMS                  //
+//                                                                                                               //
+// **************************************************************************************************************//
+
+container SourceData : using = "Units;Geography"
+{
+	unit<uint32> points
+	:	NrOfRows   = 15
+	,	DialogType = "Map"
+	,	DialogData = "location"
+	{
+		parameter<uint32> nrAttr := 3;
+		unit<uint32> instances := range(uint32, 0, nrAttr*#.)
+		{
+			attribute<float32> coordinates:
+			[
+				120571.453,488673.466,0,
+				120416.893,488337.466,1,
+				120121.213,487477.306,2,
+				120121.213,487013.626,3,
+				120403.453,486247.546,4,
+				121189.693,485676.346,5,
+				122251.453,485797.306,6,
+				123279.613,486227.386,7,
+				123642.493,486529.786,8,
+				124112.893,486576.826,9,
+				124112.893,487289.146,10,
+				123595.453,487631.866,11,
+				121727.293,488209.786,12,
+				120732.733,488707.066,13,
+				120571.453,488673.466,14
+			];
+		}
+
+		attribute<m>      X     := instances/coordinates[value(uint32(id(.))* nrAttr + 0, instances)][m];
+		attribute<m>      Y     := instances/coordinates[value(uint32(id(.))* nrAttr + 1, instances)][m];
+		attribute<uint32> order := instances/coordinates[value(uint32(id(.))* nrAttr + 2, instances)][uint32];
+
+		attribute<rdc> geometry := point(X,Y,rdc)
+		{
+			parameter<uint32>  SymbolColor := rgb(0,200,0), DialogType = "SymbolColor";
+			parameter<float32> SymbolSize  := 24f         , DialogType = "SymbolSize";
+			parameter<int16>   SymbolIndex := 169[int16]  , DialogType = "SymbolIndex";
+		}
+	}
+
+	unit<uint32> arcs_poly : NrOfRows = 1
+	,	DialogType = "Map"
+	,	DialogData = "line"
+	{
+		attribute<rdc> arc  (arc, .) := points2sequence(points/geometry, const(0[.], points), points/order)
+		{
+			parameter<uint32> PenColor := rgb(200,0,0), DialogType = "PenColor";
+		}
+
+		attribute<rdc> poly (poly, .) := points2sequence(points/geometry, const(0[.], points), reverse(points/order))
+		{
+			parameter<uint32> BrushColor := rgb(0,0,200), DialogType = "BrushColor";
+		}
+	}
+}

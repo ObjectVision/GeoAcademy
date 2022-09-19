@@ -1,0 +1,35 @@
+container basics_single_domain_exercise
+{
+	unit<float32> nr_inh    := baseunit('inhabitants', float32);
+	unit<float32> m         := baseunit('meter', float32);
+	unit<float32> m2        := m * m;
+	unit<float32> ha        := 10000f * m2;
+	unit<float32> nr_inh_m2 := nr_inh / m2;
+	unit<float32> nr_inh_ha := nr_inh / ha;
+
+	container Geography
+	{
+		unit<fpoint> rdc_base : format = "EPSG:28992", DialogData = "ngr_layer";
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f));
+
+		#include<ngr_layer.dms>
+	}
+
+	container SourceData
+	{
+		unit<uint32> province
+		:	StorageName     = "%ProjDir%/Data/provincie.shp"
+		,	StorageType     = "gdal.vect"
+		,	StorageReadOnly = "True"
+		{
+			attribute<Geography/rdc> geometry (poly);
+			attribute<string>        naam;
+			attribute<string>        label := naam;
+			attribute<nr_inh>        inwoners;
+		}
+	}
+
+	container Results: Using = "SourceData"
+	{
+	}
+}

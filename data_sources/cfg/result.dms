@@ -1,0 +1,61 @@
+container data_sources_result
+{
+	container Geography
+	{
+		unit<fpoint> rdc_base : Format = "EPSG:28992", DialogData = "ngr_layer";                // Rijksdriehoekstelsel, a 2D cartesian coordinate system for the netherlands
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f));  // Define a 2D range consisting of 2D cartesian coordinates, later used for the "province" domain unit geometry attribute
+	}
+
+	container SourceData
+	{
+		unit<uint32> gemeente                                // create a domain unit of uint32 = 2^32 = 4294967296 max rows, actual number of rows based on the gemeente.csv file
+		:	StorageName     = "%ProjDir%/Data/gemeente.csv"  // Location of file to be read by the storagemanager
+		,	StorageType     = "gdal.vect"                    // Use the gdal.vect storage manager
+		,	StorageReadOnly = "True";                        // We will not be editing the underlying datafile
+
+		unit<uint32> NS_station                              
+		:	StorageName     = "%ProjDir%/Data/NS_stations_2019_RD.shp"
+		,	StorageType     = "gdal.vect"
+		,	StorageReadOnly = "True"
+		{
+			attribute<Geography/rdc> geometry; // Default read as points
+		}
+
+		unit<uint32> motorway                               
+		:	StorageName     = "%ProjDir%/Data/OSM_Motorways_NL.shp"
+		,	StorageType     = "gdal.vect"
+		,	StorageReadOnly = "True"
+		{
+			attribute<Geography/rdc> geometry (arc); // The geometry consists of arcs, (arc) gives GeoDMS instructions for interpreting the geometry
+		}
+
+		unit<uint32> Corop                                  
+		:	StorageName     = "%ProjDir%/Data/CBS_COROP_2012.shp"
+		,	StorageType     = "gdal.vect"
+		,	StorageReadOnly = "True"
+		{
+			attribute<Geography/rdc> geometry (polygon); // The geometry consists of polygons, (polygon) or (poly) gives GeoDMS instructions for interpreting the geometry
+		}
+
+		unit<spoint> BBG
+		:	StorageName     = "%ProjDir%/Data/bbg2015_100m_10k.tif"
+		,	StorageType     = "gdal.grid"                           // In contrast to the other dataitems, this one consists of a raster (GeoTiff). Hence use the gdal.grid storage manager
+		,	StorageReadOnly = "True"
+		,	DialogData      = "/Geography/rdc"                      // Coordinate system to interpret the Tiff World File (.tfw) specified upper left coordinate and steps in east and north direction.
+		{
+			attribute<uint8> GridData;                              // We know the tiff contains uint8 values for each rastercell, specified <uint8> to read correctly.
+		}
+	}
+
+	container Export
+	{
+		unit<uint32> NS_stations := SourceData/NS_station
+		,	StorageName = "%LocalDataProjDir%/NS_stations_export.dbf" // The .dbf file to write to, which works in concert with a .shp file to specify attributes of each geometry
+		{
+			attribute<Geography/rdc>    geometry   := SourceData/NS_station/geometry, StorageName = "%LocalDataProjDir%/NS_stations_export.shp"; // The shapefile to be created, a copy of the input shapefile's geometry
+			attribute<string>           naam       := SourceData/NS_station/Webnaam;                                                                
+			attribute<SourceData/Corop> corop_rel  := point_in_polygon(SourceData/NS_station/geometry, SourceData/Corop/geometry), DisableStorage = "True"; // See https://www.geodms.nl/Point_in_polygon, relation for each NS Station towards what Corop geometry it lies in
+			attribute<string>           naam_corop := SourceData/Corop/statnaam[corop_rel]; // Add an attribute to the .dbf with for each NS station the corop region it is located in
+		} 
+	}
+}

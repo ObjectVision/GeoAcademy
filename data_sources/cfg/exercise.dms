@@ -1,0 +1,16 @@
+container data_sources_exercise
+{
+	container Geography
+	{
+		unit<fpoint> rdc_base : Format = "EPSG:28992", DialogData = "ngr_layer";
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f));
+	}
+
+	container SourceData
+	{
+	}
+
+	container Export
+	{
+	}
+}

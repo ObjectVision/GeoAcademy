@@ -1,0 +1,47 @@
+container Classifications:  using = "Units"
+{
+	unit<uint8> metro_stations: NrOfRows = 8
+	{
+		parameter<uint8> nrAttr := 2b;
+		unit<uint8> elem := range(uint8, 0b, nrAttr *#metro_stations[uint8])
+		{
+			attribute<string> values: [ 
+			//'station_name','bestaand'
+			 'Station Noord',         'False'
+			,'Station Noorderpark',   'False'
+			,'Station Centraal',      'True'
+			,'Station Rokin',         'False'  
+			,'Station Vijzelgracht',  'False' 
+			,'Station De Pijp',       'False'  
+			,'Station Europaplein',   'False'
+			,'Station Zuid',          'True' 
+			];
+		}
+		attribute<.> id                   := id(.);
+		attribute<string> label           := name, DialogType = "LabelText"; 
+		attribute<string> station_name    := elem/values[value(id * nrAttr + 0b, elem)];
+		attribute<string> name            := replace(station_name, ' ', '_');
+		
+		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+	}	
+	
+	unit<uint8> buffers: nrofrows = 6
+	{
+		attribute<uint8>  ID               := ID(.);
+		attribute<uint32> values           : [500, 1000, 1500, 2000, 2500, 3000];
+		attribute<uint32> values_prev      := MakeDefined(values[id-1b],0);
+		attribute<string> name_rep         := replace(string(values), '00', '00m', '00m0', '000m');
+		attribute<string> name_rep_prev    := replace(string(values_prev), '00', '00m', '00m0', '000m');
+		attribute<string> name             := 'buf_' + string(values_prev) + '_' + name_rep;
+		attribute<string> name2            := 'buff_' + name_rep;
+		attribute<string> name2_prev       := 'buff_' + name_rep_prev;
+	}
+	
+	unit<uint32> years  := range(uint32, 2000, 2013)
+	{
+		attribute<uint32> values       := id(.);
+		attribute<string> name         := replace(string(values), '20', 'Y20');
+		
+		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+	}
+}

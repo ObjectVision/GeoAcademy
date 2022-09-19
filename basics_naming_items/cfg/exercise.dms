@@ -1,0 +1,78 @@
+container basics_naming_items_exercise
+{
+	container Units
+	{
+		unit<float32> nr_inh      := baseunit('inhabitants', float32);
+		unit<float32> meterunit   := baseunit('meter', float32);
+		unit<float32> M2          := meterunit * meterunit;
+		unit<float32> kilometer   := 1000f * meterunit;
+
+		unit<float32> ha          := 10000f * m2;
+		unit<float32> millisecond := baseunit('millisecond', float32);
+		unit<float32> s           := 1000f * millisecond;
+		unit<float32> hour        := 3600f * s;
+
+		unit<float32> km_hr       := kilometer / hour;
+
+		container density_Units
+		{
+			unit<float32> nr_inh_m2 := nr_inh / M2;
+			unit<float32> nr_inh_ha := nr_inh / ha;
+		}
+	}
+	container Geography
+	{
+		unit<fpoint> rdc_base : format = "EPSG:28992", DialogData = "ngr_layer";
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f));
+
+		#include<ngr_layer.dms>
+	}
+
+	container SourceData
+	{
+		container provinces
+		{
+			unit<uint32> provinces_yr2020
+			:	StorageName     = "%ProjDir%/Data/provincie.shp"
+			,	StorageType     = "gdal.vect"
+			,	StorageReadOnly = "True"
+			{
+				attribute<rdc>    geometry (poly);
+				attribute<string> naam;
+				attribute<string> label := naam;
+				attribute<nr_inh> inwoners;
+			}
+		}
+	}
+
+	container Parameters
+	{
+		container groeivoet
+		{
+			parameter<float32> yr2021_yr := 1.05f;
+		}
+	}
+
+	container Results
+	{
+		container province
+		{
+			unit<uint32> yr2020 := SourceData/provinces/provinces_yr2020
+			{
+				attribute<rdc>       geometry (poly) := SourceData/provinces/provinces_yr2020/geometry;
+				attribute<string>    province_name   := SourceData/provinces/provinces_yr2020/naam;
+				attribute<nr_inh>    inhabitants     := SourceData/provinces/provinces_yr2020/inwoners;
+				attribute<nr_inh_m2> density_m2      := inhabitants / area(geometry, m2);
+				attribute<nr_inh_ha> density_ha      := density_m2[nr_inh_ha];
+				attribute<km_hr>     max_SPEED       := const(100[km_hr],.);
+			}
+
+			unit<uint32> yr2021 := SourceData/province/province_yr2020
+			{
+				attribute<rdc>    geometry (poly) := SourceData/provinces/provinces_yr2020/geometry;
+				attribute<string> province_naam   := SourceData/provinces/provinces_yr2020/naam;
+				attribute<nr_inh> inwoners_2021   := groeivoet/yr2021_yr * SourceData/provinces/provinces_yr2020/inwoners;
+			}
+		}
+	}
+}

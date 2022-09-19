@@ -1,0 +1,36 @@
+container basics_multiple_domains_result
+{
+	container Geography // Define the extend of the scene and the projection 
+	{
+		unit<fpoint> rdc_base : format = "EPSG:28992", DialogData = "ngr_layer";               // Rijksdriehoekstelsel, a 2D cartesian coordinate system for the netherlands
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f)); // Define a 2D range consisting of 2D cartesian coordinates, later used for the "province" domain unit geometry attribute
+
+		#include<ngr_layer.dms>                                                                // Tiles for background layer
+	}
+
+	container SourceData
+	{
+		unit<uint32> PC4_points                                  // Domain unit, PC4_points, containing centroid points of four-digit zip-codes in the Netherlands
+		:	StorageName     = "%ProjDir%/Data/pc4_xy_tm2020.shp" // Path to shapefile, containing the PC4 points
+		,	StorageType     = "gdal.vect"                        // Type of file to read
+		,	StorageReadOnly = "True"                             // We will not be editting the underlying shapefile
+		{
+			attribute<Geography/rdc> geometry;                   // Obtained geometry from the "pc4_xy_tm2020.shp" file consisting of points
+			attribute<string>        postcode4;                  // 4 digit zip-codes as string
+		}
+	}
+
+	container Analysis
+	{
+		attribute<string>     PC4            (SourceData/PC4_points) := SourceData/PC4_points/postcode4; // The list of PC4 zip-codes, excluding the geometry
+		attribute<string>     PC2            (SourceData/PC4_points) := left(PC4, 2);                    // Create a subset of the first two entries of the four-digit zipcode
+
+		unit<uint32> PC2_Points := unique(PC2) // Domain unit that creates a unique array of PC2 zip-codes
+		{
+			attribute<uint32> count_PC4_in_PC2  := count(id(SourceData/PC4_points), PC2_Points_rel);     // Count the number of ids given the relation defined in PC2_Points_rel
+			attribute<uint32> pcount_PC4_in_PC2 := pcount(PC2_Points_rel);                               // Similar to count, assumes relational attribute as parameter
+		}
+
+		attribute<PC2_Points> PC2_Points_rel (SourceData/PC4_points) := rlookup(PC2, PC2_Points/values); // Create a relation pointing from PC4 to a unique list of PC2 (which is defined below) zip-codes
+	}
+}

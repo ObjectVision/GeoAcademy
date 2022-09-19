@@ -1,0 +1,26 @@
+container basics_multiple_domains_exercise
+{
+	container Geography
+	{
+		unit<fpoint> rdc_base : Format = "EPSG:28992", DialogData = "ngr_layer";
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f));
+
+		#include<ngr_layer.dms>
+	}
+
+	container SourceData
+	{
+		unit<uint32> PC4_points
+		:	StorageName     = "%ProjDir%/Data/pc4_xy_tm2020.shp"
+		,	StorageType     = "gdal.vect"
+		,	StorageReadOnly = "True"
+		{
+			attribute<Geography/rdc> geometry;
+			attribute<string>        postcode4;
+		}
+	}
+
+	container Analysis
+	{
+	}
+}

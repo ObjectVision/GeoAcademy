@@ -1,0 +1,41 @@
+container CalculationSchemes: using = "units;geography"
+{
+	#include <buffers.dms>
+
+	template Make_per_Stations
+	{
+		//
+		parameter<string> station_varname;
+		//
+		unit<uint32> subset  := Subset(Stations/NZL_stations/name == station_varname)
+		{
+			attribute<geography/rdc>    geometry                    := Stations/NZL_stations/geometry[nr_OrgEntity];
+			attribute<float32>          x                           := PointCol(geometry);
+			attribute<float32>          y                           := PointRow(geometry);
+			
+			attribute<subset>           point_rel (sg_points)       := connect(geometry, sg_points/geometry);		
+
+			attribute<float32>          x_sg (sg_points)            := PointCol(geometry)[point_rel];
+			attribute<float32>          y_sg (sg_points)            := PointRow(geometry)[point_rel];
+			attribute<float32>          delta_x (sg_points)         := abs(x_sg - sg_points/x)^2f;
+			attribute<float32>          delta_y (sg_points)         := abs(y_sg - sg_points/y)^2f;
+
+			attribute<m>                dist (sg_points)            := sqrt(delta_x + delta_y)[m];
+		}
+	}
+	
+	Template MeanPerStation_T
+	{
+		///
+		parameter<string> StationNaam;
+		///
+	
+		container mean_500m :=
+			for_each_nedv(
+				classifications/years/name
+				, 'mean(Is500m/'+StationNaam+' ? SourceData/HousingDensity/woningen'+ string(classifications/years/values) +'[sg_points/NL_grid_domain_rel] : (0/0)[float32])'
+				, void
+				, float32
+			);
+	}
+}

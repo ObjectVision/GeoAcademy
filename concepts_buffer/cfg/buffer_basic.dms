@@ -1,0 +1,20 @@
+// **************************************************************************************************************//
+//                                                                                                               //
+//                       GeoDMS Academy, Basic Buffer Operations, January, 2021                                  //
+//                                                                                                               //
+// The GeoDMS Academy configuarations are used to get familiar with the GeoDMS syntax and to assist users        //
+// with specific tasks                                                                                           //
+//                                                                                                               //
+// For more information, see: https://www.geodms.nl/Configuration_examples, section: full configuration examples //
+//                                                                                                               //
+// This configuration shows how to make buffers for point, arc and polygon data with the GeoDMS                  //
+//                                                                                                               //
+// **************************************************************************************************************//
+
+container GeoDMS_Academy_buffer_basic
+{
+	#include <units.dms>
+	#include <geography.dms>
+	#include <sourcedata.dms>
+	#include <buffers.dms>
+}

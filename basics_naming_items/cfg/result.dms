@@ -1,0 +1,102 @@
+container basics_naming_items_results
+{ 
+	container Units
+	{
+		unit<float32> nr_inh := baseunit('inhabitants', float32); // See https://www.geodms.nl/BaseUnit, inhabitants as float32 are a build-in unit of GeoDMS
+		unit<float32> m      := baseunit('meter', float32)  , Descr = "meterunit was redundant and the abbreviation m is advised";
+		unit<float32> m2     := m * m                       , Descr = "use the lowercase symbol m in stead of M";
+		unit<float32> km     := 1000f * m                   , Descr = "use the symbol k for the factor and m for meter";
+
+		unit<float32> ha     := 10000f * m2;
+		unit<float32> ms     := 0.001 * s                   , Descr = "configure s(econd) as base unit, as it is the si unit for time. Use the symbol m for the factor and s for second.";
+		unit<float32> s      := baseunit('second', float32) , Descr = "configure s(econd) as base unit.";
+		unit<float32> hour   := 3600f * s                   , Descr = "you can also use the abbreviation hr in stead of hour";
+
+		unit<float32> km_hr  := km / hour;
+
+		container density: Descr = "The suffix _Units is redundant, as the name Units is the name of a parent"
+		{
+			unit<float32> nr_inh_m2 := nr_inh / m2;
+			unit<float32> nr_inh_ha := nr_inh / ha;
+		}
+	}
+	container Geography
+	{
+		unit<fpoint> rdc_base : format = "EPSG:28992", DialogData = "ngr_layer";               // Rijksdriehoekstelsel, a 2D cartesian coordinate system for the netherlands
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f)); // Define a 2D range consisting of 2D cartesian coordinates, later used for the "province" domain unit geometry attribute
+
+		#include<ngr_layer.dms>                                                                // Tiles for background layer
+	}
+
+	container SourceData
+	{
+		container province: Descr = "name objects singular"
+		{
+			unit<uint32> yr2020
+			:	StorageName     = "%ProjDir%/Data/provincie.shp"
+			,	StorageType     = "gdal.vect"
+			,	StorageReadOnly = "True"
+			,	Descr           = "The prefix provinces_ is redundant, as the name province is the name of a parent"
+			{
+				attribute<Geography/rdc> geometry (poly): Descr = "The rdc unit could not be found, as it is not configured as subitem of yr2020 or in one of the parents of yr2020. Therefor the Units parent need to be added, as the container Units can be found in the root item.";
+				attribute<string> naam;
+				attribute<string> label := naam;
+				attribute<Units/nr_inh> inwoners: Descr = "The nr_inh unit could not be found, as it is not configured as subitem of yr2020 or in one of the parents of yr2020. Therefor the Units parent need to be added, as the container Units can be found in the root item.";
+			}
+		}
+	}
+
+	container Parameters
+	{
+		container groeivoet
+		{
+			parameter<float32> yr2021_yr := 1.05f; // single parameter, the f in 1.05f means the rational number is a 32-bit float
+		}
+	}
+
+	container Results
+	{
+		container province
+		{
+			unit<uint32> yr2020 := SourceData/province/yr2020
+			{
+				attribute<Geography/rdc>           geometry (poly) := SourceData/province/yr2020/geometry   , Descr = "The rdc unit could not be found, as it is not configured as subitem of yr2020 or in one of the parents of yr2020. Therefor the Geography parent need to be added, as the container Geography can be found in the root item.";
+				attribute<string>                  name            := SourceData/province/yr2020/naam       , Descr = "The province_ prefix is redundant, as the name province is the name of a parent";
+				attribute<Units/nr_inh>            inhabitants     := SourceData/province/yr2020/inwoners   , Descr = "The nr_inh unit could not be found, as it is not configured as subitem of yr2020 or in one of the parents of yr2020. Therefor the Units parent need to be added, as the container Units can be found in the root item.";
+				attribute<Units/density/nr_inh_m2> density_m2      := inhabitants / area(geometry, Units/m2), Descr = "The nr_inh_m2 and m2 Units could not be found, as they are not configured as subitem of yr2020 or in one of the parents of yr2020. Therefor the Units/density and unit parent need to be added, as the container Units/density and unit can be found in the root item.";
+				attribute<Units/density/nr_inh_ha> density_ha      := density_m2[Units/density/nr_inh_ha]   , Descr = "The nr_inh_ha unit could not be found, as it is not configured as subitem of yr2020 or in one of the parents of yr2020. Therefor the Units/density parent need to be added, as the container Units/density can be found in the root item.";
+				attribute<Units/km_hr>             max_speed       := const(100[Units/km_hr],.)             , Descr = "Dont use uppercase for SPEED. The km_hr unit could not be found, as it is not configured as subitem of yr2020 or in one of the parents of yr2020. Therefor the Units parent need to be added, as the container Units can be found in the root item.";
+			}
+
+			unit<uint32> yr2021 := SourceData/province/yr2020
+			{
+				attribute<Geography/rdc> geometry (poly) := SourceData/province/yr2020/geometry; // (poly) is specified to let GeoDMS know we are dealing with polygons
+				attribute<string>        name            := SourceData/province/yr2020/naam;
+				attribute<Units/nr_inh>  inwoners        := Parameters/groeivoet/yr2021_yr * SourceData/province/yr2020/inwoners, Descr = "The _2021 suffix is redundant, as it already defined by the parent. The groeivoet could not be found, as it is not configured as subitem of yr2021 or in one of the parents of yr2020. Therefor the Parameters parent need to be added, as the container Parameters can be found in the root item.";
+			}
+		}
+	}
+	
+	container Results_alternative: Using = "Units;Geography"
+	{
+		container province
+		{
+			unit<uint32> yr2020 := SourceData/province/yr2020
+			{
+				attribute<rdc>               geometry (poly) := SourceData/province/yr2020/geometry; // (poly) is specified to let GeoDMS know we are dealing with polygons
+				attribute<string>            name            := SourceData/province/yr2020/naam;
+				attribute<nr_inh>            inhabitants     := SourceData/province/yr2020/inwoners;
+				attribute<density/nr_inh_m2> density_m2      := inhabitants / area(geometry, m2);    // the inhabitants are attributes for each polygon geometry, hence we divide the inhabitants by the area (function) of each polygon
+				attribute<density/nr_inh_ha> density_ha      := density_m2[density/nr_inh_ha];       // cast the population density into the density per ha using brackets: []
+				attribute<km_hr>             max_speed       := const(100[km_hr],.);                 // Assume the maximum speed is always 100, construct an array with domain unit yr2020, specified by: '.'                
+			}
+
+			unit<uint32> yr2021 := SourceData/province/yr2020
+			{
+				attribute<rdc>    geometry (poly) := SourceData/province/yr2020/geometry;            // (poly) is specified to let GeoDMS know we are dealing with polygons
+				attribute<string> name            := SourceData/province/yr2020/naam;
+				attribute<nr_inh> inwoners        := Parameters/groeivoet/yr2021_yr * SourceData/province/yr2020/inwoners; // element wise multiplication
+			}
+		}
+	}
+}

@@ -1,0 +1,42 @@
+container GeoDMS_Academy_Aggregation
+{
+	container Units
+	{
+		unit<float32> m          := baseunit('m', float32) , label = "meter";
+		unit<float32> km         := 1000f * m;
+		unit<float32> s          := baseunit('s', float32) , label = "second";
+		unit<float32> min        := 60.0 * s               , label = "minute";
+		unit<float32> hr         := 60.0 * min             , label = "hour";
+		unit<float32> m_s        := m / s                  , label = "meter per seconde";
+		unit<float32> km_hr      := km / hr                , label = "kilometer per hour";
+		unit<float32> ratio;
+	}
+	
+	container classifications : using = "units"
+	{
+	}
+	
+	#include <geography.dms>
+	
+	container SourceData: Using = "Units;Geography"
+	{
+		container BAG
+		{
+			unit<uint32> pand_plus
+			:	DialogType = "Map"
+			,	DialogData = "geometry"
+			,	StorageName = "%ProjDir%/Data/BAG_Hulst.fss"
+			,	StorageReadOnly = "True"
+			{
+				attribute<string>     identificatie;
+				attribute<rdc>   geometry(poly);
+				attribute<rdc>   centroid       := centroid_or_mid(geometry);
+			}
+		}
+	
+	}
+	
+	container Analysis
+	{
+	}
+}

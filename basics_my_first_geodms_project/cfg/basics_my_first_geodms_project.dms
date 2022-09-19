@@ -1,0 +1,4 @@
+container GeoDMS_Academy_my_first_GeoDMS_project
+{
+	parameter<string> my_first_param := 'Welcome in the GeoDMS world.';
+}

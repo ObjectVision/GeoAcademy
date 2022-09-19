@@ -1,0 +1,48 @@
+container Buffers:	Using = "units;classifications"
+{
+	unit<uint32> circle
+	:	IsHidden = "True"
+	,	nrofrows = 65
+	{
+		attribute<Float32> angle  := Float32(ID(.)) * 2f * float32(pi()) / Float32(64);
+		attribute<Float32> x      := cos(angle);
+		attribute<Float32> y      := sin(angle);
+		attribute<FPoint>  xy     := Point(cos(angle), sin(angle) )
+		{
+			parameter<int16> SymbolIndex := int16(169), DialogType = "SymbolIndex";
+		}
+	}
+
+	Template Make_Buffers 
+	{
+		// 
+		parameter<string> NZL_station;
+		unit<uint32> entrance;
+		//
+		container radius  := 
+			for_each_ne(
+				classifications/buffers/name2
+				, 'Process_Radius(' + string(classifications/buffers/values) + ', entrance)' 
+			);
+	}
+	
+	Template Process_Radius
+	{
+		//
+		parameter<uint32> radius;
+		unit<uint32> entrance;
+		//
+		
+		unit<uint32> points:= Combine(entrance, circle)
+		{
+			attribute<FPoint> xy   :=
+				Point(
+					  entrance/x[nr_1] + float32(radius) * Float32(circle/x[nr_2])
+					, entrance/y[nr_1] + float32(radius) * Float32(circle/y[nr_2])
+					, geography/rdc
+				);
+		}			
+		attribute<geography/rdc> buffer (entrance, polygon) := points2sequence(points/xy, points/nr_1, #circle - points/nr_2 - 1);
+		parameter<geography/rdc> buffer_diss (polygon) := union_polygon(buffer[geography/rdc_mm])[geography/rdc];
+	}
+}

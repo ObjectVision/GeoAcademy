@@ -1,0 +1,56 @@
+// **************************************************************************************************************//
+//                                                                                                               //
+//                       GeoDMS Academy, Basic Buffer Operations, January, 2021                                  //
+//                                                                                                               //
+// The GeoDMS Academy configuarations are used to get familiar with the GeoDMS syntax and to assist users        //
+// with specific tasks                                                                                           //
+//                                                                                                               //
+// For more information, see: https://www.geodms.nl/Configuration_examples, section: full configuration examples //
+//                                                                                                               //
+// This configuration shows how to make grids (different grid size) from vector data (polygons and arcs)         //
+//                                                                                                               //
+// **************************************************************************************************************//
+
+container Grids : Using = "Units;Geography"
+{
+	container BBG2grid
+	{
+		// poly2grid for different grid levels
+		attribute<Classifications/BBG_hoofdgroep> m100 (AMS_grid/m100/domain) := SourceData/BBG/BBG_HOOFDG[poly2grid(/SourceData/BBG/geometry_rd, AMS_grid/m100/domain)];
+		attribute<Classifications/BBG_hoofdgroep> m10  (AMS_grid/m10/domain)  := SourceData/BBG/BBG_HOOFDG[poly2grid(/SourceData/BBG/geometry_rd, AMS_grid/m10/domain)];
+		attribute<Classifications/BBG_hoofdgroep> m2   (AMS_grid/m2/domain)   := SourceData/BBG/BBG_HOOFDG[poly2grid(/SourceData/BBG/geometry_rd, AMS_grid/m2/domain)];
+
+		// poly2grid at detailed level, aggregated to larger cells
+		attribute<Classifications/BBG_hoofdgroep> m100_based_on_2m (AMS_grid/m100/domain) := modus(m2, AMS_grid/m2/m100_rel);
+
+		// poly2grid at detailed level, aggregated to larger cells with any road/airport cell at 2m
+		attribute<uint32> roads_m2   (AMS_grid/m2/domain) := m2 ==  5[Classifications/BBG_hoofdgroep] ? 1 : 0;
+		attribute<uint32> airport_m2 (AMS_grid/m2/domain) := m2 == 11[Classifications/BBG_hoofdgroep] ? 1 : 0;
+
+		// only large roads
+		attribute<Classifications/BBG_hoofdgroep> m100_large_roads_airport (AMS_grid/m100/domain) := 
+			switch(
+				 case(sum(roads_m2  , AMS_grid/m2/m100_rel) > 1000,  5[Classifications/BBG_hoofdgroep])
+				,case(sum(airport_m2, AMS_grid/m2/m100_rel) > 1000, 11[Classifications/BBG_hoofdgroep])
+				,m100_based_on_2m
+				);
+
+		// also smaller roads
+		attribute<Classifications/BBG_hoofdgroep> m100_smaller_roads_airport (AMS_grid/m100/domain) := 
+			switch(
+				 case(sum(roads_m2  , AMS_grid/m2/m100_rel) > 100,  5[Classifications/BBG_hoofdgroep])
+				,case(sum(airport_m2, AMS_grid/m2/m100_rel) > 100, 11[Classifications/BBG_hoofdgroep])
+				,m100_based_on_2m
+				);
+	}
+	container OSM2grid
+	{
+		unit<uint32> segments  := arc2segm(SourceData/road/lijn);
+		unit<uint32> dynapoint := dyna_point(segments/Point, segments/NextPoint, 10[m]);
+		attribute<bool> isOSMroad(Geography/AMS_grid/m10/domain) := isDefined(invert(dynapoint/point[Geography/AMS_grid/m10/domain]));
+	}
+	container combined
+	{
+		attribute<Classifications/BBG_hoofdgroep> m10 (AMS_grid/m10/domain) := OSM2grid/isOSMroad ? 5[Classifications/BBG_hoofdgroep] : BBG2grid/m10;
+	}
+}

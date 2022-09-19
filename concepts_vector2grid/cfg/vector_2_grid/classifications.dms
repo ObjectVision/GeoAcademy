@@ -1,0 +1,45 @@
+// **************************************************************************************************************//
+//                                                                                                               //
+//                       GeoDMS Academy, Basic Buffer Operations, January, 2021                                  //
+//                                                                                                               //
+// The GeoDMS Academy configuarations are used to get familiar with the GeoDMS syntax and to assist users        //
+// with specific tasks                                                                                           //
+//                                                                                                               //
+// For more information, see: https://www.geodms.nl/Configuration_examples, section: full configuration examples //
+//                                                                                                               //
+// This configuration shows how to make grids (different grid size) from vector data (polygons and arcs)         //
+//                                                                                                               //
+// **************************************************************************************************************//
+
+container Classifications
+{
+	unit<uint32> BBG_hoofdgroep : nrofrows = 13
+	{
+		attribute<string> label:
+		[
+			 'Bebouwd'
+			,'Bedrijfsterrein'
+			,'Bos'
+			,'Droog natuurlijk terrein'
+			,'Glastuinbouw'
+			,'Hoofdweg'
+			,'Landbouw'
+			,'Nat natuurlijk terrein'
+			,'Recreatie'
+			,'Semi-bebouwd'
+			,'Spoorweg'
+			,'Vliegveld'
+			,'Water'
+		];
+
+		attribute<uint32> BrushColor :
+		[
+			 rgb(200,  0,  0),rgb(100,100,100),rgb(  0,100,  0),rgb(0,200,  0),rgb(255,128,0)
+			,rgb(255,255,  0),rgb(255,  0,  0),rgb(  0,  0,200),rgb(0,200,200),rgb(255,  0,0)
+			,rgb(200,200,200),rgb(  0,  0,  0),rgb(  0,  0,200)
+		],
+		DialogType =  "BrushColor";
+
+		attribute<uint32> PenColor := BrushColor, DialogType = "PenColor";
+	}
+}

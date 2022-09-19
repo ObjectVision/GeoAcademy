@@ -1,0 +1,276 @@
+container GeoDMS_Academy_Polygon_Processing
+{
+	container Units
+	{
+		unit<float32> m  := BaseUnit('m', float32);
+		unit<float32> m2 := m * m;
+	}
+
+	#include <Geography.dms>
+
+	container Circle: Using = "Units;Geography"
+	{
+		unit<uint32> template: nrofrows = 65
+		{
+			attribute<float64> angle := float64(id(.)) * 2d * float64(pi()) / 64d;
+			attribute<float64> x     := cos(angle);
+			attribute<float64> y     := sin(angle);
+			attribute<float64> xy    := point(cos(angle), sin(angle));
+		}
+
+		unit<uint32> shape: nrofrows = 1
+		{
+			attribute<rdc_meter> centre_point := const(point(156000f, 461000f, rdc_meter),.);
+		}
+
+		parameter<m> radius   := 500[m];
+
+		unit<uint32> pointset := combine(shape, template)
+		{
+			attribute<rdc_meter> point :=
+				point(
+					 pointcol(shape/centre_point[nr_1]) + radius * float32(circle/template/x[nr_2])
+					,pointrow(shape/centre_point[nr_1]) + radius * float32(circle/template/y[nr_2])
+					,rdc_meter
+				);
+			attribute<uint32> ordinal := #pointset - nr_2 - 1;
+		}
+		attribute<rdc_meter> geometry (poly, shape) := points2sequence(pointset/point, pointset/nr_1, pointset/ordinal);
+	}
+
+	container Square: Using = "Units;Geography"
+	{
+		unit<uint32> shape: nrofrows = 1
+		{
+			attribute<rdc_meter> left_top     := const(point(157500f, 461500f, rdc_meter),.);
+			attribute<rdc_meter> right_top    := const(point(158500f, 461500f, rdc_meter),.);
+			attribute<rdc_meter> right_bottom := const(point(158500f, 460500f, rdc_meter),.);
+			attribute<rdc_meter> left_bottom  := const(point(157500f, 460500f, rdc_meter),.);
+		}
+
+		unit<uint32> pointset : nrofrows = 5
+		{
+			attribute<rdc_meter> point    := union_data(., shape/left_top, shape/right_top, shape/right_bottom, shape/left_bottom, shape/left_top);
+			attribute<shape>     sequence := const(0,., shape);
+			attribute<uint32>    order    := id(.);
+		}
+
+		attribute<rdc_meter> geometry (poly, shape) := points2sequence(pointset/point, pointset/sequence, pointset/order);
+
+		container sub
+		{
+			unit<uint32> all : nrofrows = 4
+			,	DialogType = "Map"
+			,	DialogData = "geometry"
+			{
+				attribute<rdc_meter>  geometry (poly) := union_data(., lefttop/geometry, righttop/geometry, rightbottom/geometry, leftbottom/geometry);
+				attribute<NorthSouth> NorthSouth_rel  := union_data(., 0, 0, 1, 1);
+			}
+
+			unit<uint32> NorthSouth : nrofrows = 2
+			{
+				attribute<string> label : ['north','south'];
+			}
+
+			container lefttop     := make_square(point(-250f, 250f, rdc_meter));
+			container righttop    := make_square(point(500f,  250f, rdc_meter));
+			container rightbottom := make_square(point(500f, -500f, rdc_meter));
+			container leftbottom  := make_square(point(-250f, -500f, rdc_meter));
+
+			template make_square
+			{
+				// begin case parameter
+				parameter<rdc_meter> delta;
+				// end case parameter
+	
+				unit<uint32> shape: nrofrows = 1
+				{
+					parameter<m>         size := 750[m];
+
+					attribute<rdc_meter> left_top     := square/shape/left_top + delta;
+					attribute<rdc_meter> right_top    := left_top + point(size,  0[m], rdc_meter);
+					attribute<rdc_meter> right_bottom := left_top + point(size, -size, rdc_meter);
+					attribute<rdc_meter> left_bottom  := left_top + point(0[m], -size, rdc_meter);
+				}
+
+				unit<uint32> pointset : nrofrows = 5
+				{
+					attribute<rdc_meter> point    := union_data(., shape/left_top, shape/right_top, shape/right_bottom, shape/left_bottom, shape/left_top);
+					attribute<shape>     sequence := const(0,., shape);
+					attribute<uint32>    order    := id(.);
+				}
+
+				attribute<rdc_meter> geometry (poly, shape) := points2sequence(pointset/point, pointset/sequence, pointset/order);
+			}
+		}
+	}
+
+	container Triangle: Using = "Units;Geography"
+	{
+		unit<uint32> shape: nrofrows = 1
+		{
+			attribute<rdc_meter> top          := const(point(158000f, 459500f, rdc_meter),.);
+			attribute<rdc_meter> right_bottom := const(point(158500f, 458500f, rdc_meter),.);
+			attribute<rdc_meter> left_bottom  := const(point(157500f, 458500f, rdc_meter),.);
+		}
+
+		unit<uint32> pointset : nrofrows = 4
+		{
+			attribute<rdc_meter> point    := union_data(., shape/top, shape/right_bottom, shape/left_bottom, shape/top);
+			attribute<shape>     sequence := const(0,., shape);
+			attribute<uint32>    order    := id(.);
+		}
+
+		attribute<rdc_meter> geometry (poly, shape) := points2sequence(pointset/point, pointset/sequence, pointset/order);
+	}
+
+	unit<uint32> Shape : nrofrows = 3
+	,	DialogType = "map"
+	,	DialogData = "geometry"
+	{
+		attribute<Geography/rdc_meter> geometry       (poly) := union_data(., circle/geometry, square/geometry , triangle/geometry);
+
+		attribute<Units/m2>            area            := area(geometry, Units/m2);
+
+		attribute<Geography/rdc_meter> centre_point    := centroid_or_mid(geometry);
+		attribute<Geography/rdc_meter> lower_bound     := lower_bound(geometry);
+		attribute<Geography/rdc_meter> upper_bound     := upper_bound(geometry);
+
+		container inflated
+		{
+			attribute<Geography/rdc_meter> i100m_kernel_4 (shape, poly) := polygon_I4d(ipolygon(geometry), 100d)[Geography/rdc_meter]
+			{
+				parameter<int16> PenStyle := 5s, DialogType = "PenStyle";
+			}
+
+			attribute<Geography/rdc_meter> i100m_kernel_8 (shape, poly) := polygon_I8d(ipolygon(geometry), 100d)[Geography/rdc_meter]
+			{
+				parameter<int16> PenStyle := 5s, DialogType = "PenStyle";
+			}
+
+			attribute<Geography/rdc_meter> i100m_kernel_16 (shape, poly) := polygon_I16d(ipolygon(geometry), 100d)[Geography/rdc_meter]
+			{
+				parameter<int16> PenStyle := 5s, DialogType = "PenStyle";
+			}
+		}
+		container deflated
+		{
+			attribute<Geography/rdc_meter> d100m_kernel_4 (shape, poly) := polygon_D4d(ipolygon(geometry), 100d)[Geography/rdc_meter]
+			{
+				parameter<int16> PenStyle := 5s, DialogType = "PenStyle";
+			}
+
+			attribute<Geography/rdc_meter> d100m_kernel_8 (shape, poly) := polygon_D8d(ipolygon(geometry), 100d)[Geography/rdc_meter]
+			{
+				parameter<int16> PenStyle := 5s, DialogType = "PenStyle";
+			}
+
+			attribute<Geography/rdc_meter> d100m_kernel_16 (shape, poly) := polygon_D16d(ipolygon(geometry), 100d)[Geography/rdc_meter]
+			{
+				parameter<int16> PenStyle := 5s, DialogType = "PenStyle";
+			}
+		}
+		container buffer
+		{
+			attribute<Geography/rdc_meter> b100m (shape, poly) := (ipolygon(inflated/i100m_kernel_16) - ipolygon(shape/geometry))[Geography/rdc_meter];
+		}
+	}
+
+	container Union
+	{
+		parameter<Geography/rdc_meter> circle_square_triangle_union       (poly) := union_polygon(ipolygon(shape/geometry))[Geography/rdc_meter];
+		parameter<Geography/rdc_meter> circle_square_triangle_plus        (poly) := (ipolygon(circle/geometry[0]) + ipolygon(square/geometry[0]) + ipolygon(triangle/geometry[0]))[Geography/rdc_meter];
+
+		parameter<Geography/rdc_meter> dissolve_subsquares_to_one_square  (poly) :=  union_polygon(ipolygon(square/sub/all/Geometry))[Geography/rdc_meter];
+		parameter<Geography/rdc_meter> subsquares_to_one_square_plus      (poly) := (ipolygon(square/sub/lefttop/Geometry[0]) + ipolygon(square/sub/righttop/Geometry[0]) + ipolygon(square/sub/rightbottom/Geometry[0])+ ipolygon(square/sub/leftbottom/Geometry[0]))[Geography/rdc_meter];
+
+		attribute<Geography/rdc_meter> dissolve_subsquares_to_north_south (poly, square/sub/NorthSouth) := partitioned_union_polygon(ipolygon(square/sub/all/Geometry), square/sub/all/NorthSouth_rel)[Geography/rdc_meter];
+	}
+
+	container Overlap
+	{
+		parameter<Geography/rdc_meter> square_and_subsquare (poly) := (ipolygon(square/Geometry[0]) * ipolygon(square/sub/lefttop/Geometry[0]))[Geography/rdc_meter];
+	}
+
+	container difference
+	{
+		parameter<Geography/rdc_meter> square_min_subsquare (poly) := (ipolygon(square/Geometry[0]) - ipolygon(square/sub/lefttop/Geometry[0]))[Geography/rdc_meter];
+	}
+
+	container connected
+	{
+		unit<uint32> connection := polygon_connectivity(ipolygon(square/sub/All/Geometry));
+	}
+
+	container Reproject: Using = "Units;Geography"
+	{
+		container settings
+		{
+			parameter<m> X_org :=      0[m];
+			parameter<m> Y_org := 375000[m];
+			parameter<m> size  :=    100[m];
+
+			parameter<m> SE_distance := 4f * size;
+			parameter<m> NE_distance := 6f * size;
+	
+			parameter<m> Xc_aligned :=  SE_distance * sqrt(2f) / 2f;
+			parameter<m> Yc_aligned := -SE_distance * sqrt(2f) / 2f;
+			parameter<m> Xr_aligned :=  NE_distance * sqrt(2f) / 2f;
+			parameter<m> Yr_aligned :=  NE_distance * sqrt(2f) / 2f;
+	
+			parameter<m> Xc := Xc_aligned;
+			parameter<m> Yc := Yc_aligned;
+			parameter<m> Xr := Xr_aligned - 0.5f * Xc;
+			parameter<m> Yr := Yr_aligned - 0.5f * Yc;
+	
+			parameter<m2>      Determinant := (Xc * Yr - Xr * Yc);
+			parameter<float32> f_inv       := 1f / Determinant;
+
+			parameter<float32> precisie_factor := 100f; // ivm afrondingen voor de ipolygon;
+		}
+
+		unit<uint32> pointset := sequence2points(shape/geometry)
+		{
+			attribute<float32> X := pointCol (point) - settings/X_org;
+			attribute<float32> Y := pointRow (point) - settings/Y_org;
+
+			attribute<float32> R := settings/f_inv * (X * settings/Yr - Y * settings/Xr);
+			attribute<float32> C := settings/f_inv * (Y * settings/Xc - X * settings/Yc);
+
+			// check that: (X,Y) == (Xc Xr \n Yc Yr) (C R)
+			attribute<m> X_check := settings/Xc * R + settings/Xr * C;
+			attribute<m> Y_check := settings/Yc * R + settings/Yr * C + settings/Y_org;
+
+			attribute<fpoint> point_reproject := point(settings/precisie_factor * R, settings/precisie_factor * C, fpoint); // factor 100 ivm ipolygon vertalen en afrondingen
+		}
+		attribute<Geography/rdc_meter> geometry_org (shape, poly) := points2sequence(pointset/point, pointset/sequencenr, pointset/ordinal);
+
+		attribute<fpoint> geometry (shape, poly) := points2sequence(pointset/point_reproject, pointset/sequencenr, pointset/ordinal)
+		{
+			parameter<int16> PenStyle := 5s, DialogType = "PenStyle";
+		}
+		attribute<fpoint> geometry_inflated_100m (shape, poly) := polygon_I16d(ipolygon(geometry), 100d)[fpoint]
+		{
+			parameter<int16> PenStyle := 5s, DialogType = "PenStyle";
+		}
+
+		container reprojected_2_rd_inflated
+		{
+			unit<uint32> pointset := sequence2points(reproject/geometry_inflated_100m)
+			{
+				attribute<float32> C := pointRow (point) / settings/precisie_factor;
+				attribute<float32> R := pointCol (point) / settings/precisie_factor;
+
+				attribute<m> X := settings/Xc * R + settings/Xr * C;
+				attribute<m> Y := settings/Yc * R + settings/Yr * C + settings/Y_org;
+
+				attribute<geography/rdc_meter> point_rdc := point(X, Y, geography/rdc_meter);
+			}
+
+			attribute<geography/rdc_meter> stretched_i100m_kernel_16 (shape, poly) := points2sequence(pointset/point_rdc, pointset/sequencenr, pointset/ordinal)
+			{
+				parameter<int16> PenStyle := 5s, DialogType = "PenStyle";
+			}
+		}
+	}
+}

@@ -1,0 +1,125 @@
+// **************************************************************************************************************//
+//                                                                                                               //
+//                       GeoDMS Academy, Basic Buffer Operations, January, 2021                                  //
+//                                                                                                               //
+// The GeoDMS Academy configuarations are used to get familiar with the GeoDMS syntax and to assist users        //
+// with specific tasks                                                                                           //
+//                                                                                                               //
+// For more information, see: https://www.geodms.nl/Configuration_examples, section: full configuration examples //
+//                                                                                                               //
+// This configuration shows how to make buffers for point, arc and polygon data with the GeoDMS                  //
+//                                                                                                               //
+// **************************************************************************************************************//
+
+container Buffers : Using = "Units;Geography"
+{
+	container impl
+	{
+		unit<uint32> circle: nrofrows = 65
+		{
+			attribute<float32> angle := float32(id(.)) * 2f * float32(pi()) / float32(64);
+			attribute<float32> x     := cos(angle);
+			attribute<float32> y     := sin(angle);
+			attribute<FPoint>  xy    := point(cos(angle), sin(angle))
+			{
+				parameter<int16> SymbolIndex := int16(169), DialogType = "SymbolIndex";
+			}
+		}
+
+		template make_circle
+		{
+			// begin case parameters
+			parameter<m> radius;
+			unit<uint32> src;
+			// end case parameters
+
+			unit<uint32> points := combine(src, impl/circle)
+			{
+				attribute<fpoint> xy :=
+					point(
+						  src/x[nr_1] + float32(radius) * float32(impl/circle/x[nr_2])
+						, src/y[nr_1] + float32(radius) * float32(impl/circle/y[nr_2])
+						, geography/rdc
+					);
+			}
+			attribute<geography/rdc> geometry (src, polygon) := points2sequence(points/xy, points/nr_1, #impl/circle - points/nr_2 - 1);
+		}
+
+		template make_rhombus
+		{
+			// begin case parameters
+			parameter<m> radius;
+			unit<uint32> src;
+			// end case parameters
+
+			unit<uint32> points := union_unit(src, src, src, src, src)
+			{
+				attribute<m>             x        := union_data(., src/x         , src/x + radius, src/x         , src/x - radius, src/x);
+				attribute<m>             y        := union_data(., src/y - radius, src/y         , src/y + radius, src/y         , src/y - radius);
+				attribute<src>           sequence := union_data(., id(src),id(src),id(src),id(src),id(src));
+				attribute<uint32>        ordinal  := union_data(., const(0,src),const(1,src),const(2,src),const(3,src),const(4,src));
+				attribute<geography/rdc> point    := point(x,y,geography/rdc);
+			}
+			attribute<geography/rdc> geometry (src, polygon) := points2sequence(points/point, points/sequence, reverse(points/ordinal));
+		}
+	}
+
+	container point
+	{
+		container vector
+		{
+			container circles_m100 := impl/make_circle(100[m], SourceData/points);
+			container circles_m500 := impl/make_circle(500[m], SourceData/points);
+			
+			container rhombus_m100 := impl/make_rhombus(100[m], SourceData/points);
+			container rhombus_m500 := impl/make_rhombus(500[m], SourceData/points);
+			
+		}
+		container grid
+		{
+			attribute<Geography/AMS_grid/domain> grid_rel    (SourceData/points)         := SourceData/points/Geometry[Geography/AMS_grid/domain];
+			attribute<SourceData/points>         point_rel   (Geography/AMS_grid/domain) := invert(grid_rel);
+			
+			attribute<bool>                      buffer_100m (Geography/AMS_grid/domain) := potential(float32(point_rel), Geography/Kernel/m100) > 0f;
+			attribute<bool>                      buffer_500m (Geography/AMS_grid/domain) := potential(float32(point_rel), Geography/Kernel/m500) > 0f;
+		}
+	}
+	
+	container arc
+	{
+		unit<uint32> segments   := arc2segm(SourceData/arcs_poly/arc);
+		unit<uint32> dyna_point := dyna_point(segments/point, segments/nextpoint, 50[m]);
+
+		container grid
+		{
+			attribute<Geography/AMS_grid/domain> grid_rel    (dyna_point)                := dyna_point/point[Geography/AMS_grid/domain];
+			attribute<dyna_point>                point_rel   (Geography/AMS_grid/domain) := invert(grid_rel);
+			
+			attribute<bool>                      buffer_100m (Geography/AMS_grid/domain) := potential(float32(point_rel), Geography/Kernel/m100) > 0f;
+			attribute<bool>                      buffer_500m (Geography/AMS_grid/domain) := potential(float32(point_rel), Geography/Kernel/m500) > 0f;
+		}
+	}
+
+	container polygon
+	{
+		container vector
+		{
+			attribute<ipoint>        ipoly                 (poly, SourceData/arcs_poly) := ipolygon(SourceData/arcs_poly/poly);
+			attribute<ipoint>        ipoly_inf_m100        (poly, SourceData/arcs_poly) := polygon_i8D(ipoly, 100d); // This is not advised for domains with many and complex polygons
+			attribute<geography/rdc> polygon_inflated_m100 (poly, SourceData/arcs_poly) := ipoly_inf_m100[geography/rdc];
+
+			attribute<geography/rdc> buffer_m100           (poly, SourceData/arcs_poly) := (ipoly_inf_m100 - ipoly)[geography/rdc];
+		}
+
+		container grid
+		{
+			attribute<SourceData/arcs_poly> poly_rel       (Geography/AMS_grid/domain) := poly2grid(SourceData/arcs_poly/poly, Geography/AMS_grid/domain);
+
+			attribute<float32>              potential_100m (Geography/AMS_grid/domain) := potential(float32(poly_rel + 1), Geography/Kernel/m100);
+			attribute<float32>              potential_500m (Geography/AMS_grid/domain) := potential(float32(poly_rel + 1), Geography/Kernel/m500);
+
+			attribute<bool>                 buffer_100m    (Geography/AMS_grid/domain) := isNull(poly_rel) && potential_100m > 0f;
+			attribute<bool>                 buffer_500m    (Geography/AMS_grid/domain) := isNull(poly_rel) && potential_500m > 0f;
+		}
+	}
+}

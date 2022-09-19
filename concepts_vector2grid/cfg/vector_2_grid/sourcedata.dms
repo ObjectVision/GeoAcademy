@@ -1,0 +1,39 @@
+// **************************************************************************************************************//
+//                                                                                                               //
+//                       GeoDMS Academy, Basic Buffer Operations, January, 2021                                  //
+//                                                                                                               //
+// The GeoDMS Academy configuarations are used to get familiar with the GeoDMS syntax and to assist users        //
+// with specific tasks                                                                                           //
+//                                                                                                               //
+// For more information, see: https://www.geodms.nl/Configuration_examples, section: full configuration examples //
+//                                                                                                               //
+// This configuration shows how to make grids (different grid size) from vector data (polygons and arcs)         //
+//                                                                                                               //
+// **************************************************************************************************************//
+
+container SourceData : using = "Units;Geography;Classifications"
+{
+	unit<uint32> BBG
+	:	StorageName     = "%ProjDir%/data/BBG_groot_ams.shp"
+	,	StorageReadOnly = "True"
+	,	StorageType     = "gdal.vect"
+	,	SyncMode        = "none"
+	,	DialogType      = "map"
+	,	DialogData      = "geometry_rd"
+	{
+		attribute<rdc>            geometry_rd  (poly);
+		attribute<BBG_hoofdgroep> BBG_hoofdg;
+	}
+	
+	unit<uint32> road
+	:	StorageName     = "%ProjDir%/data/road.fss"
+	,	StorageReadOnly = "True"
+	,	DialogType      = "map"
+	,	DialogData      = "geometry_rd"
+	{
+		attribute<string> name;
+		attribute<uint32> osm_id;
+
+		attribute<rdc>    lijn(arc);
+	}
+}
