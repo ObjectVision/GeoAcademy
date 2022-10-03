@@ -9,7 +9,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 		attribute<uint32>                               Inwoners_2019;
 		attribute<uint32>                               values       := Inwoners_2019;
 		
-		attribute<bool>                                 IsSA                                             := IsDefined(point_in_polygon(geometry, RegioIndelingen/Provincie/sub/geometry));
+		attribute<bool>                                 IsSA                                             := IsDefined(point_in_polygon(geometry, RegioIndelingen/Provincies/sub/geometry));
 		attribute<NL_grid/domain>                       NL_grid_domain_100m_rel                          := geometry[NL_grid/domain];
 		attribute<NL_grid/domain_500m>                  NL_grid_domain_500m_rel                          := geometry[NL_grid/domain_500m];
 		attribute<NL_grid/domain_1000m>                 NL_grid_domain_1000m_rel                         := geometry[NL_grid/domain_1000m];
