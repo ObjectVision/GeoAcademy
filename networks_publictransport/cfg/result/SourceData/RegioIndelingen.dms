@@ -1,0 +1,43 @@
+container RegioIndelingen : using = "geometries"
+{
+	unit<uint32> PC4_punten
+	:	StorageName     = "%SourceDataDir%/GeoDMS_Academy/pc4_xy_tm2020.gpkg"
+	,	StorageType = "gdal.vect"
+	, 	storagereadOnly = "true"
+	,	SyncMode = "none"
+	{
+		attribute<rdc>                  geometry;
+		attribute<string>               label;
+		attribute<string>               name                          := label;
+		attribute<bool>                 IsSA                          := IsDefined(point_in_polygon(geometry, Provincies/sub/geometry));
+		
+		unit<uint32> sub := subset(IsSA)
+		{
+			attribute<rdc>                  geometry                      := ../geometry[nr_OrgEntity];
+			attribute<rdc>                  point                         := geometry;
+			attribute<string>               name                          := ../name[nr_OrgEntity];
+			attribute<string>               label                         := name, DialogType = "LabelText";
+		}
+	}
+	
+	unit<uint32> Provincies
+	:	StorageName     = "%SourceDataDir%/GeoDMS_Academy/Provinciegrenzen_2019.gml"
+	,	StorageType     = "gdal.vect"
+	,	StorageReadOnly = "True"
+	,	SyncMode = "none"
+	{
+		attribute<geometries/rdc>       geometry (poly);
+		attribute<string>               provincienaam;
+		attribute<string>               name           := AsItemName(provincienaam);
+		attribute<string>               label          := provincienaam;
+		
+		unit<uint32> sub := subset(name == 'Noord_Holland')
+		{
+			attribute<geometries/rdc>       geometry (poly) := ../geometry[nr_OrgEntity];
+			attribute<string>               name            := ../name[nr_OrgEntity];
+			attribute<string>               label           := ../label[nr_OrgEntity];
+		}
+	
+	}
+
+}

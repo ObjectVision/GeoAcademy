@@ -1,0 +1,351 @@
+container Templates: Using = "Units;Classifications"
+{   
+	#include <netwerk.dms>
+	
+	Template createNetwork_Org2Stop 
+	{
+		unit<uint32> inOrgs;
+		unit<uint32> inStops;
+
+		unit<uint32> points := TiledUnit(25000[union_unit(inOrgs, inStops)])
+		, DialogData = "point"
+		, DialogType = "map" 
+		, FreeData = "false"
+		, StoreData = "true"
+		{
+			attribute<geometries/rdc>   point   := union_data(., inOrgs/point, inStops/point);
+			
+			attribute<string>     Name    := union_data(., inOrgs/name , inStops/name), DialogType = "LabelText";
+			
+			attribute<.> Per_inOrgs (inOrgs ) := value(ID(inOrgs ), .);
+			attribute<.> Per_inDests(inStops) := value(ID(inStops)+#inOrgs, .);
+		}
+		
+		unit<uint32> Lines := SourceData/OSM/result
+		{
+			attribute<geometries/rdc>   geometry (arc) := SourceData/OSM/result/geometry;
+			attribute<float32>    length        := SourceData/OSM/result/length;
+		}
+		
+		unit<uint32> Network := connect(Lines/geometry, points/point)
+		{
+			attribute<geometries/rdc> geometry     (arc)    := UnionData;
+			attribute<geometries/rdc> fromPoint         := first_point(geometry);
+			attribute<geometries/rdc> toPoint           := last_point(geometry);
+			
+			attribute<m>        Length            := arc_length(geometry, m);
+			attribute<s_f>      Seconds           := MakeDefined(Length / Parameters/Advanced/WalkingSpeed, 1[s_f]);
+			
+			unit<uint32>        PointSet          := union_unit(Network, Network)
+			{
+				attribute<geometries/rdc> points        := union_data(.,fromPoint,toPoint);
+			}
+			
+			unit<uint32>        NodeSet           := unique(PointSet/points);
+			
+			attribute<NodeSet>  F1                := rlookup(fromPoint,NodeSet/Values);
+			attribute<NodeSet>  F2                := rlookup(toPoint,NodeSet/Values);
+			
+			attribute<NodeSet>  org_node (inOrgs)  := rlookup(inOrgs/point, NodeSet/Values);
+			attribute<NodeSet>  dst_node (inStops) := rlookup(inStops/point, NodeSet/Values);
+			
+			unit<uint32> NetCheck := connected_parts(F1, F2);
+			
+			unit<uint32> ODMatrix :=
+				dijkstra_m('bidirectional;startPoint(Node_rel):max_imp;endPoint(Node_rel);cut(OrgZone_max_imp);limit(OrgZone_max_mass,DstZone_mass);alternative(link_imp):alt_imp;od:impedance,OrgZone_rel,DstZone_rel'
+					, Seconds
+					, F1
+					, F2
+					, org_node
+					, dst_node
+					, parameters/MaxLoopDistSelectie
+					, parameters/MaxODconn, 1f //limit
+					, Length //alt imp
+				)
+			, FreeData = "false"
+			, StoreData = "true"
+			{
+				attribute<Time>	   Duration           := RoundUp(Impedance)[uint32][Time];
+				attribute<float32> Duration_minutes   := Impedance / 60f;
+				
+				attribute<string>  From               := inOrgs/Name[OrgZone_rel];
+				attribute<string>  To                 := inStops/Name[DstZone_rel];
+				
+				attribute<inOrgs>  OrgRef             := OrgZone_rel; 
+				attribute<inStops> StopRef            := DstZone_rel; 
+				
+				attribute<string>  OrgName            := inOrgs/name[OrgRef];
+				attribute<string>  StopName           := inStops/name[StopRef];
+				
+				attribute<m>       Distance           := float32(alt_imp)[m]; 
+				
+				attribute<geometries/rdc>  Org_point      := inOrgs/point[OrgRef];
+				attribute<geometries/rdc>  Dest_point     := inStops/point[StopRef];
+				
+				attribute<bool>      checkFrom      := first_point(line) = Org_point;
+				attribute<bool>      checkTo        := last_point(line) = Dest_point;
+				attribute<geometries/rdc>  toPoint        := last_point(line);
+				attribute<geometries/rdc>  fromPoint      := first_point(line);
+				attribute<geometries/rdc>  Line (arc)     := points2sequence(LinkPoints/Point, LinkPoints/ODPathRel, LinkPoints/CumulOrdinal);
+				attribute<string>    LabelText      := 'Walking path from: ' + OrgName + ' to ' + StopName, DialogType = "LabelText";
+
+				unit<uint32> LinkPoints := union_unit(., .)
+				, DialogData = "point"
+				, DialogType = "map" 
+				{
+					attribute<..>                   ODPathRel    := union_data(., id(..), id(..));
+					attribute<geometries/rdc>             point        := union_data(., ../Org_point, ../Dest_point);
+					attribute<uint32>               CumulOrdinal := union_data(., const(0,..,uint32), const(1,..,uint32));
+				}				
+			}
+		}
+	}
+	Template createNetwork_Stop2Dest 
+	{
+		unit<uint32> inStops;
+		unit<uint32> inDests;
+		
+		unit<uint32> points := TiledUnit(25000[union_unit(inStops, inDests)])
+		{
+			attribute<geometries/rdc>   point   := union_data(., inStops/point, inDests/point);
+			
+			attribute<string>     Name    := union_data(., inStops/name , inDests/name), DialogType = "LabelText";
+			
+			attribute<.> Per_inOrgs (inStops ) := value(ID(inStops ), .);
+			attribute<.> Per_inDests(inDests) := value(ID(inDests)+#inStops, .);
+		}
+
+		unit<uint32> Lines := SourceData/OSM/result
+		{
+			attribute<geometries/rdc>   geometry (arc) := SourceData/OSM/result/geometry;
+			attribute<float32>          length         := SourceData/OSM/result/length;
+		}
+		
+		unit<uint32> Network := connect(Lines/geometry, points/point)
+		{
+			attribute<geometries/rdc> geometry    (arc) := UnionData;
+			attribute<geometries/rdc> fromPoint         := first_point(geometry);
+			attribute<geometries/rdc> toPoint           := last_point(geometry);
+			
+			attribute<m>        Length            := arc_length(geometry, m);
+			attribute<s_f>      Seconds           := MakeDefined(Length / Parameters/Advanced/WalkingSpeed, 1[s_f]);
+			
+			unit<uint32>        PointSet          := union_unit(Network, Network)
+			{
+				attribute<geometries/rdc> points        := union_data(.,fromPoint,toPoint);
+			}
+			
+			unit<uint32>        NodeSet           := unique(PointSet/points);
+			
+			attribute<NodeSet>  F1                := rlookup(fromPoint,NodeSet/Values);
+			attribute<NodeSet>  F2                := rlookup(toPoint,NodeSet/Values);
+			
+			attribute<NodeSet>  org_node (inStops) := rlookup(inStops/point, NodeSet/Values);
+			attribute<NodeSet>  dst_node (inDests) := rlookup(inDests/point, NodeSet/Values);
+			
+			unit<uint32> NetCheck := connected_parts(F1, F2);
+			
+			unit<uint32> ODMatrix :=
+				dijkstra_m('bidirectional;startPoint(Node_rel):max_imp;endPoint(Node_rel);cut(OrgZone_max_imp);limit(OrgZone_max_mass,DstZone_mass);alternative(link_imp):alt_imp;od:impedance,OrgZone_rel,DstZone_rel'
+					, Seconds
+					, F1
+					, F2
+					, dst_node
+					, org_node
+					, parameters/MaxLoopDistSelectie
+					, parameters/MaxODconn, 1f //limit
+					, Length //alt imp
+				)
+			{
+				attribute<Time>	   Duration           := RoundUp(Impedance)[uint32][Time];
+				attribute<float32> Duration_minutes   := Impedance / 60f;
+				attribute<string>  From               := inDests/Name[OrgZone_rel];
+				attribute<string>  To                 := inStops/Name[DstZone_rel];
+				attribute<inStops> StopRef            := DstZone_rel; 
+				attribute<inDests> DestRef            := OrgZone_rel; 
+				
+				attribute<string>  StopName           := inStops/name[StopRef];
+				attribute<string>  DestName           := inDests/name[DestRef];
+				attribute<m>       Distance           := float32(alt_imp); 
+				attribute<geometries/rdc>  Dest_point     := inStops/point[StopRef];
+				attribute<geometries/rdc>  Org_point      := inDests/point[DestRef];
+				
+				attribute<bool>      checkFrom      := first_point(line) = Org_point;
+				attribute<bool>      checkTo        := last_point(line) = Dest_point;
+				attribute<geometries/rdc>  toPoint        := last_point(line);
+				attribute<geometries/rdc>  fromPoint      := first_point(line);
+				attribute<geometries/rdc>  Line (arc)     := points2sequence(LinkPoints/Point, LinkPoints/ODPathRel, LinkPoints/CumulOrdinal);
+				attribute<string>    LabelText      := 'Walking path from: ' + StopName + ' to ' + DestName, DialogType = "LabelText";
+
+				unit<uint32> LinkPoints := union_unit(., .)
+				, DialogData = "point"
+				, DialogType = "map" 
+				{
+					attribute<..>                   ODPathRel    := union_data(., id(..), id(..));
+					attribute<geometries/rdc>       point        := union_data(., ../Org_point, ../Dest_point);
+					attribute<uint32>               CumulOrdinal := union_data(., const(0,..,uint32), const(1,..,uint32));
+				}
+			}
+		}
+	}	
+	Template createNetwork_Org2Dest
+	{
+		unit<uint32> inOrgs;
+		unit<uint32> inDests;
+		
+		unit<uint32> points := TiledUnit(25000[union_unit(inOrgs, inDests)])
+		{
+			attribute<geometries/rdc>   point   := union_data(., inOrgs/point, inDests/point);
+			attribute<string>           Name    := union_data(., inOrgs/name , inDests/name), DialogType = "LabelText";
+			
+			attribute<.> Per_inOrgs (inOrgs ) := value(ID(inOrgs ), .);
+			attribute<.> Per_inDests(inDests) := value(ID(inDests)+#inOrgs, .);
+		}
+
+		unit<uint32> Lines := SourceData/OSM/result
+		{
+			attribute<geometries/rdc>   geometry (arc) := SourceData/OSM/result/geometry;
+			attribute<float32>          length         := SourceData/OSM/result/length;
+		}
+		
+		unit<uint32> Network := connect(Lines/geometry, points/point)
+		{
+			attribute<geometries/rdc> geometry (arc)    := UnionData;
+			attribute<geometries/rdc> fromPoint         := first_point(geometry);
+			attribute<geometries/rdc> toPoint           := last_point(geometry);
+			attribute<m>        Length            := arc_length(geometry, m);
+			attribute<s_f>      Seconds           := Duration_walk;
+			attribute<s_f>      Duration_walk     := MakeDefined(Length / ModelParameters/Advanced/WalkingSpeed, 1[s_f]);
+			attribute<s_f>      Duration_bike     := MakeDefined(Length / ModelParameters/Advanced/BikingSpeed, 1[s_f]);
+			unit<uint32>        PointSet          := union_unit(Network, Network)
+			{
+				attribute<geometries/rdc> points        := union_data(.,fromPoint,toPoint);
+			}
+			unit<uint32>        NodeSet           := unique(PointSet/points);
+			attribute<NodeSet>  F1                := rlookup(fromPoint,NodeSet/Values);
+			attribute<NodeSet>  F2                := rlookup(toPoint,NodeSet/Values);
+			attribute<NodeSet>  org_node (inOrgs)  := rlookup(inOrgs/point, NodeSet/Values);
+			attribute<NodeSet>  dst_node (inDests) := rlookup(inDests/point, NodeSet/Values);
+			
+			unit<uint32> NetCheck := connected_parts(F1, F2);
+			
+			unit<uint32> ODMatrix :=
+				dijkstra_m('bidirectional;startPoint(Node_rel):max_imp;endPoint(Node_rel);limit(OrgZone_max_mass,DstZone_mass);alternative(link_imp):alt_imp;od:impedance,OrgZone_rel,DstZone_rel'
+					, Seconds
+					, F1
+					, F2
+					, org_node
+					, dst_node
+					, parameters/MaxODconn, 1f //limit
+					, Length //alt imp
+				)
+			{
+				attribute<Time>	   Duration           := RoundUp(Impedance)[uint32][Time];
+				attribute<float32> Duration_minutes   := Impedance / 60f;
+				
+				attribute<string>  From               := inOrgs/Name[OrgZone_rel];
+				attribute<string>  To                 := inDests/Name[DstZone_rel];
+				
+				attribute<inOrgs>  OrgRef             := OrgZone_rel; 
+				attribute<inDests> DestRef            := DstZone_rel; 
+				
+				attribute<string>  OrgName            := inOrgs/name[OrgRef];
+				attribute<string>  DestName           := inDests/name[DestRef];
+				
+				attribute<m>       Distance           := float32(alt_imp); 
+				
+				attribute<geometries/rdc>  Org_point        := inOrgs/point[OrgRef];
+				attribute<geometries/rdc>  Dest_point       := inDests/point[DestRef];
+				
+				attribute<bool>      checkFrom      := first_point(line) = Org_point;
+				attribute<bool>      checkTo        := last_point(line) = Dest_point;
+				attribute<geometries/rdc>  toPoint        := last_point(line);
+				attribute<geometries/rdc>  fromPoint      := first_point(line);
+				attribute<geometries/rdc>  Line (arc)     := points2sequence(LinkPoints/Point, LinkPoints/ODPathRel, LinkPoints/CumulOrdinal);
+				attribute<string>    LabelText      := 'Walking path from: ' + OrgName + ' to ' + DestName, DialogType = "LabelText";
+
+				unit<uint32> LinkPoints := union_unit(., .)
+				, DialogData = "point"
+				, DialogType = "map" 
+				{
+					attribute<..>                   ODPathRel    := union_data(., id(..), id(..));
+					attribute<geometries/rdc>       point        := union_data(., ../Org_point, ../Dest_point);
+					attribute<uint32>               CumulOrdinal := union_data(., const(0,..,uint32), const(1,..,uint32));
+				}
+			}
+		}
+	}	
+
+	#include<StaticNetsCreator.dms>
+
+	Template LoadCSVThroughGDAL 
+	{
+		unit<uint32> File_Structure;
+		parameter<File_Structure> inFile;
+		
+		container CreateFSS
+		{
+			unit<uint32> ReadCSV
+			: StorageName     = "= '%ProjDir%/Data/GTFS_feed/'+ModelParameters/FileDate+'/'+File_Structure/Name[inFile]+'.csv'"
+			, StorageType     = "gdal.vect"
+			, StorageReadOnly = "True";
+
+			unit<uint32> CSV_attributes := SubItem_PropValues(ReadCSV,'name');
+			
+			container MakeFSSDomain : StorageName = "= '%ProjDir%/Data/GTFS_feed/'+ModelParameters/FileDate+'/fss/'+File_Structure/Name[inFile]+'_domain.fss'"
+			{
+				unit<uint32> domain := ReadCSV;
+			}
+	
+			container MakeFSS := 
+				for_each_nedv(
+					CSV_attributes/name
+					, 'ReadCSV/' + CSV_attributes/name
+					, MakeFSSDomain/domain
+					, string
+				),	StorageName = "= '%ProjDir%/Data/GTFS_feed/'+ModelParameters/FileDate+'/fss/'+File_Structure/Name[inFile]+'.fss'"
+			{
+				unit<uint32> domain := MakeFSSDomain/domain;
+			}
+		}
+	}
+	
+	Template doDateSelection 
+	{
+		container Data;
+		unit<uint32> Services;
+		
+		unit<uint32> Calendar:= Data/Calendar/read_domain/domain
+		{
+			attribute<string> monday                  := Data/Calendar/data/monday;
+			attribute<string> tuesday                 := Data/Calendar/data/tuesday;
+			attribute<string> wednesday               := Data/Calendar/data/wednesday;
+			attribute<string> thursday                := Data/Calendar/data/thursday;
+			attribute<string> friday                  := Data/Calendar/data/friday;
+			attribute<string> saturday                := Data/Calendar/data/saturday;
+			attribute<string> sunday                  := Data/Calendar/data/sunday;
+			attribute<string> service_id              := Data/Calendar/data/service_id;
+			attribute<uint32> nStartDate              := uint32(Data/Calendar/data/start_date);
+			attribute<uint32> nEndDate                := uint32(Data/Calendar/data/end_date);
+			attribute<bool>   Today_in_daterange      := uint32(ModelParameters/Date) >= nStartDate && uint32(ModelParameters/Date) <= nEndDate;
+			attribute<bool>   Yesterday_in_daterange  := uint32(ModelParameters/Advanced/PrevDate) >= nStartDate && uint32(ModelParameters/Advanced/PrevDate) <= nEndDate;
+		}
+		
+		unit<uint32> Calendar_dates := Data/Calendar_dates/read_domain/domain  
+		{
+			attribute<uint32>   nDate       := uint32(Data/Calendar_dates/data/date);
+			attribute<uint32>   nType       := uint32(Data/Calendar_dates/data/exception_type);
+			attribute<Services> ServicesRef := rlookup(Data/Calendar_dates/data/service_id, Services/Values);
+			attribute<uint32>   Today       := uint32(uint32(ModelParameters/Date) = nDate);  
+			attribute<uint32>   Yesterday   := uint32(uint32(ModelParameters/Advanced/PrevDate) = nDate);
+		}
+	}
+
+	unit<SPoint> Neighbourhood := range(spoint, point(int16(-1), int16(-1)), point(int16(2), int16(2))), Descr = "Rooks case contiguous neighbours (first order)"
+	{
+		attribute<uint32> Top     := uint32(id(.) = point(int16(0),int16(1),spoint));
+		attribute<uint32> Right   := uint32(id(.) = point(int16(1),int16(0),spoint));
+		attribute<uint32> Bottom  := uint32(id(.) = point(int16(0),int16(-1),spoint));
+		attribute<uint32> Left    := uint32(id(.) = point(int16(-1),int16(0),spoint));
+	}
+}

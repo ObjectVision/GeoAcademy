@@ -1,0 +1,46 @@
+container SourceData: Using = "Units;Classifications;geometries"
+{       
+	unit<uint32> Inhabitants
+	: StorageName = "%SourceDataDir%/GeoDMS_Academy/Inwoners_2019_500m.gpkg"
+	,	StorageType     = "gdal.vect"
+	,	StorageReadOnly = "True"
+	{
+		attribute<rdc>                                  geometry;
+		attribute<uint32>                               Inwoners_2019;
+		attribute<uint32>                               values       := Inwoners_2019;
+		
+		attribute<bool>                                 IsSA                                             := IsDefined(point_in_polygon(geometry, RegioIndelingen/Provincie/sub/geometry));
+		attribute<NL_grid/domain>                       NL_grid_domain_100m_rel                          := geometry[NL_grid/domain];
+		attribute<NL_grid/domain_500m>                  NL_grid_domain_500m_rel                          := geometry[NL_grid/domain_500m];
+		attribute<NL_grid/domain_1000m>                 NL_grid_domain_1000m_rel                         := geometry[NL_grid/domain_1000m];
+		attribute<NL_grid/domain_5000m>                 NL_grid_domain_5000m_rel                         := geometry[NL_grid/domain_5000m];
+		
+		attribute<uint32>                               sum_values_per_grid_100m  (NL_grid/domain)   := sum(values[uint32], NL_grid_domain_100m_rel);
+		attribute<uint32>                               HasValues_grid_100m     (NL_grid/domain)   := sum_values_per_grid_100m > 0 ? sum_values_per_grid_100m : (0/0);
+		
+		attribute<uint32>                               sum_values_per_grid_500m  (NL_grid/domain_500m)   := sum(values[uint32], NL_grid_domain_500m_rel);
+		attribute<uint32>                               HasValues_grid_500m     (NL_grid/domain_500m)   := sum_values_per_grid_500m > 0 ? sum_values_per_grid_500m : (0/0);
+		
+		attribute<uint32>                               sum_values_per_grid_1000m  (NL_grid/domain_1000m) := sum(values[uint32], NL_grid_domain_1000m_rel);
+		attribute<uint32>                               HasValues_grid_1000m     (NL_grid/domain_1000m) := sum_values_per_grid_1000m > 0 ? sum_values_per_grid_1000m : (0/0);
+		
+		attribute<uint32>                               sum_values_per_grid_5000m  (NL_grid/domain_5000m) := sum(values[uint32], NL_grid_domain_5000m_rel);
+		attribute<uint32>                               HasValues_grid_5000m     (NL_grid/domain_5000m) := sum_values_per_grid_5000m > 0 ? sum_values_per_grid_5000m : (0/0);
+		
+		parameter<string> Gridsize := ModelParameters/Advanced/Dest_location_scale;
+		
+		unit<uint32> HasValues := ='subset(HasValues_grid_'+Gridsize+' > 0 && any(IsSA, NL_grid_domain_'+Gridsize+'_rel))'
+		{
+			attribute<uint32> nr_values        := ='sum_values_per_grid_'+Gridsize+'[nr_OrgEntity]';
+			attribute<rdc>    geometry         := nr_OrgEntity[rdc];
+			attribute<rdc>    point            := geometry;
+			attribute<uint32> identificatie    := id(.);
+			attribute<string> id_name          := 'dest' + string(identificatie);
+			attribute<string> label            := id_name, DialogType = "LabelText";
+		} 
+	}
+	
+	#include<gtfs.dms>
+	#include<RegioIndelingen.dms>
+	#include<OSM.dms>
+}

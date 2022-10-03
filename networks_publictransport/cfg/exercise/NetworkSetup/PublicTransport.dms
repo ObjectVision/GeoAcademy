@@ -1,0 +1,144 @@
+container PublicTransport : using = "Units;ModelParameters"
+{
+	container PerMeasureMoment := 
+		for_each_ne(
+			Parameters/Advanced/MeasureMoments/Name
+			, 'GetPublicTransport('+string(Parameters/Advanced/MeasureMoments/Moment)+', '+quote(Parameters/Advanced/MeasureMoments/name)+')'
+		);
+	
+	Template GetPublicTransport 
+	{ 
+		parameter<uint32> 	inTime;
+		parameter<string> 	inTime_string;
+		
+		unit<uint32>        Static_net := SourceData/GTFS/StaticNets/Static_net;
+		unit<uint32>        Stops      := SourceData/GTFS/StaticNets/Stops;
+		unit<uint32>        NodeSet    := SourceData/GTFS/StaticNets/Static_net/NodeSet;
+		unit<uint32>        Places     := SourceData/GTFS/StaticNets/allLinks/Places;
+		
+		unit<uint32>        Org2Stop      := CreateODconnections/Sparse_uitwerking_Org2Stop/AB;
+		unit<uint32>        Stop2Dest     := CreateODconnections/Sparse_uitwerking_Stop2Dest/AB;
+		
+		unit<uint64> Combine_OrgDest := range(uint64,uint64(0),uint64(#Org) * uint64(#Dest));
+		
+		container TransitionTypes := 
+			for_each_ne(
+				Advanced/TransitionType_list/TypeMode
+				, 'Transition_T('+inTime_string+'/'+string(Advanced/TransitionType_list/Type)+', '+quote(Advanced/TransitionType_list/Type)+', '+quote(Advanced/TransitionType_list/Mode)+', '+string(Advanced/TransitionType_list/ModeMax)+', '+quote(Advanced/TransitionType_list/FromTime)+', '+quote(Advanced/TransitionType_list/ToTime)+', '+quote(Advanced/TransitionType_list/OrgDest)+')'
+			);
+		
+		Template Transition_T
+		{
+			unit<uint32>      OD_unit;
+			parameter<string> OD_unit_name;
+			parameter<string> Mode;
+			parameter<Time>   ModeMax;
+			parameter<string> FromTime_str;
+			parameter<string> ToTime_str;
+			parameter<string> OrgDest;
+			
+			parameter<string>   Arrive_at_time_CalcStr     := replace('subset(UNIT/FT >= inTime[Time] - (0.25f * #Time[float32])[uint32] && UNIT/TT <= inTime[Time] && UNIT/FT <= inTime[Time] && UNIT/duration_TM <= MM && UNIT/FT < inTime[Time] + (0.25f * #Time[float32])[uint32])','UNIT',OD_unit_name,'FT',FromTime_str,'TT', ToTime_str,'TM',Mode,'MM', string(ModeMax));
+			parameter<string>   Departure_at_time_CalcStr  := replace('subset(UNIT/FT >= inTime[Time] && UNIT/TT >= inTime[Time] && UNIT/duration_TM <= MM && UNIT/FT < inTime[Time] + (#Time / 4)[uint32])','UNIT',OD_unit_name,'FT',FromTime_str,'TT', ToTime_str,'TM',Mode,'MM', string(ModeMax));
+			parameter<string>   CalcStr  := ModelParameters/Arrival_or_Departure_at_time == 'Arrival'
+																	? Arrive_at_time_CalcStr
+																	: Departure_at_time_CalcStr;
+
+			unit<uint32> Transition := =CalcStr
+			{
+				attribute<Org>                        Org_rel           := ='OD_unit/'+OrgDest+'_rel[nr_OrgEntity]';
+				attribute<Dest>                       Dest_rel          := ='OD_unit/'+OrgDest+'_rel[nr_OrgEntity]';
+				attribute<Stops>                      Stop_rel          := OD_unit/Stop_rel[nr_OrgEntity];
+				attribute<Places>                     Place_rel         := OD_unit/Place_rel[nr_OrgEntity];
+				attribute<geometries/rdc>                   Line (arc)        := OD_unit/Line[nr_OrgEntity];
+				attribute<m>                          Distance          := OD_unit/Distance[nr_OrgEntity];
+				attribute<Time>                       Duration          := ='OD_unit/Duration_'+Mode+'[nr_OrgEntity]';
+				attribute<Time>                       FromTime          := ='OD_unit/'+FromTime_str+'[nr_OrgEntity]';
+				attribute<Time>                       toTime            := ='OD_unit/'+ToTime_str+'[nr_OrgEntity]';
+				attribute<string>                     LabelText         := OD_unit/LabelText[nr_OrgEntity], DialogType = "LabelText";
+				attribute<upoint>                     MomentxPlace_O2S  := point(toTime, Place_rel, upoint);
+				attribute<upoint>                     MomentxPlace_S2D  := point(FromTime, Place_rel, upoint);
+				attribute<NodeSet>                    NodeRef_O2S       := rlookup(MomentxPlace_O2S, NodeSet/values);
+				attribute<NodeSet>                    NodeRef_S2D       := rlookup(MomentxPlace_S2D, NodeSet/values);
+			}
+		}
+
+		container CreateODs
+		{
+			unit<uint32> StaticNet_subset := subset(Static_net/FromTime >= inTime && Static_net/ToTime < (inTime + 2 * 3600))
+			{
+				attribute<geometries/rdc>  Line (arc) := Static_net/line[nr_OrgEntity];
+				attribute<Places>    FromPlace  := Static_net/FromPlace[nr_OrgEntity];
+				attribute<Places>    ToPlace    := Static_net/ToPlace[nr_OrgEntity];
+				attribute<geometries/rdc>  FromPoint  := Static_net/FromPoint[nr_OrgEntity];
+				attribute<geometries/rdc>  ToPoint    := Static_net/ToPoint[nr_OrgEntity];
+				attribute<string>    LabelText  := Static_net/LabelText[nr_OrgEntity];
+				attribute<Time>      FromTime   := Static_net/FromTime[nr_OrgEntity];
+				attribute<Time>      ToTime     := Static_net/ToTime[nr_OrgEntity];
+				attribute<Time>      Duration   := Static_net/Duration[nr_OrgEntity];
+				attribute<LinkTypes> LinkType   := Static_net/LinkType[nr_OrgEntity];
+				attribute<NodeSet>   F1         := Static_net/F1[nr_OrgEntity];
+				attribute<NodeSet>   F2         := Static_net/F2[nr_OrgEntity];
+			}
+		
+		
+			//// CREATE OD FSS ////
+			unit<uint64> OD_traveltime_W_OV_W := 
+				dijkstra_m64('directed;startPoint(Node_rel,impedance,OrgZone_rel);endPoint(Node_rel,impedance,DstZone_rel);cut(OrgZone_max_imp);od:impedance,OrgZone_rel,DstZone_rel'
+					, StaticNet_subset/Duration[float32]
+					, StaticNet_subset/F1
+					, StaticNet_subset/F2
+					
+					, TransitionTypes/Org2StopWalk/Transition/NodeRef_O2S, TransitionTypes/Org2StopWalk/Transition/Duration[float32], TransitionTypes/Org2StopWalk/Transition/Org_rel     //sP node_rel, impedance, OrgZone_rel
+					, TransitionTypes/Stop2DestWalk/Transition/NodeRef_S2D, TransitionTypes/Stop2DestWalk/Transition/Duration[float32], TransitionTypes/Stop2DestWalk/Transition/Dest_rel //eP node_rel, impedance, DstZone_rel
+					, MaxOVDuration
+				)
+			{
+				attribute<float32>          traveltime_min               := impedance / 60f;
+				attribute<Combine_OrgDest>  OD_nummer                    := combine_data(Combine_OrgDest, OrgZone_rel, DstZone_rel);
+				
+				attribute<float32>          values                       := dest/nr_values[float32][DstZone_rel];
+				attribute<float32>          decay_function               := traveltime_min == 0f ? 1f : 1f / (1f + exp(ov_a + ov_b*log(traveltime_min) + ov_c*traveltime_min));
+				attribute<float32>          values_decayed               := MakeDefined(values * decay_function,0f);
+			}
+			
+			// unit<uint64> OD_traveltime_B_OV_W_with_BB := union_unit_uint64(OD_traveltime_B_OV_W, OD_traveltime_B_B)
+			// {
+				// attribute<float32>          values_decayed               := union_data(., OD_traveltime_B_OV_W/values_decayed, OD_traveltime_B_B/values_decayed);
+				// attribute<float32>          values                       := union_data(., OD_traveltime_B_OV_W/values        , OD_traveltime_B_B/values);
+				// attribute<Combine_OrgDest>  OD_nummer                    := union_data(., OD_traveltime_B_OV_W/OD_nummer,     OD_traveltime_B_B/OD_nummer);
+				// attribute<UniqueOD>         UniqueOD_rel                 := rlookup(OD_nummer, UniqueOD/Values);
+				
+				// attribute<float32>          values_reached_decayed (Org) := sum(UniqueOD/Bestvalues_decayed, value(UniqueOD/values / uint64(#dest), org));
+				// attribute<float32>          values_reached (Org)         := sum(UniqueOD/Bestvalues, value(UniqueOD/values / uint64(#dest), org));
+				
+				// unit<uint64> UniqueOD := unique(OD_nummer)
+				// {
+					// attribute<float32>      Bestvalues_decayed           := max(../values_decayed, ../UniqueOD_rel);
+					// attribute<float32>      Bestvalues                   := max(../values, ../UniqueOD_rel);
+				// }
+			// }
+			
+			container ExportTable 
+			{
+				attribute<float32> values_reached_B_OV_W_with_BB (org)        := OD_traveltime_B_OV_W_with_BB/values_reached       ,        StorageName = "=fileNamePrefix+'Nr'+Destset+''+'_B_OV_W_with_BB'+fileNameSuffix +'.fss'";
+				
+				attribute<string> BodyLines_values_reached_B_OV_W_with_BB(org) :=org/name + ';' + string(values_reached_B_OV_W_with_BB);
+				parameter<string> Export_CSV_values_reached_B_OV_W_with_BB := 'PostCode;'+Destset+'_'+inTime_string+'\n'++AsList(BodyLines_values_reached_B_OV_W_with_BB, '\n')
+				, StorageName = "=fileNamePrefix+'Nr'+Destset+'_decayed'+'_B_OV_W_BB'+fileNameSuffix +'.csv'"
+				, StorageType = "str";
+				
+				parameter<string> fileNamePrefix :=  '%LocalDataDir%/GeoDMS_Academy/';
+				parameter<string> fileNameSuffix :=  
+					'_' + date + 
+					'_' + Arrival_or_Departure_at_time + 
+					'_' + inTime_string + 
+					'_ORG-'    + Orgset + '-' + 
+					'_DEST-'   + Advanced/DestSet_string +
+					'_NETWERK-'+ Advanced/NetwerkExtent +
+					'_SA-'     + Advanced/StudyArea +
+					'_TRSFdist-' + string(MaxTransferDistKm) + // storage type suffix (.csv, .fss, etc ) isn't included here.
+					'_Wdist-' + string(MaxWalkDuration / 60f) + 'min';
+			}
+		}
+	}
+}

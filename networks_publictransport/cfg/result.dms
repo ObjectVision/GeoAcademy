@@ -1,0 +1,399 @@
+container GeoDMS_Academy_Network_PublicTransport
+{ 
+	#include<units.dms>
+	
+	container geometries
+	{
+		#include <ngr_layer.dms>
+
+		unit<fpoint> rdc_base : format = "EPSG:28992", DialogData = "ngr_layer";
+		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f)); //heel NL
+		unit<ipoint> rdc_mm   := gridset(rdc, point(0.001,0.001), point(0.0, 0.0), ipoint);
+		
+		unit<dpoint>  wgs84_base : format = "EPSG:4326";
+		
+		unit<uint32> selection_polygon : nrofrows = 1, Using = "units"
+		{
+			parameter<rdc> top_left     := point(NL_grid/x_min - 5000[m], NL_grid/y_max + 5000[m], rdc); //XY
+			parameter<rdc> top_right    := point(NL_grid/x_max + 5000[m], NL_grid/y_max + 5000[m], rdc);
+			parameter<rdc> bottom_left  := point(NL_grid/x_min - 5000[m], NL_grid/y_min - 5000[m], rdc);
+			parameter<rdc> bottom_right := point(NL_grid/x_max + 5000[m], NL_grid/y_min - 5000[m], rdc);
+			
+			unit<uint32> point_set : nrofrows = 5
+			{
+				attribute<rdc>  point        := union_data(., top_left, top_right, bottom_right, bottom_left, top_left);
+				attribute<..>   sequence_rel := const(0, .);
+				attribute<.>    ordinal      := id(.);
+			}
+			
+			attribute<rdc> polygon (poly)      := points2sequence(point_set/point, point_set/sequence_rel, point_set/ordinal);
+		}
+		
+		container NL_grid: Using = "units"
+		{
+			parameter<m> gridsize     := 100[m];
+			parameter<m> gridsize_500m := 500[m];
+			parameter<m> gridsize_1000m := 1000[m];
+			parameter<m> gridsize_5000m := 5000[m];
+			
+			parameter<string> StudyArea_forGrid := 'NL';
+			
+			parameter<m> x_min := StudyArea_forGrid == 'NL' ? Nederland/x_min : Amsterdam/x_min;
+			parameter<m> x_max := StudyArea_forGrid == 'NL' ? Nederland/x_max : Amsterdam/x_max;
+			parameter<m> y_min := StudyArea_forGrid == 'NL' ? Nederland/y_min : Amsterdam/y_min;
+			parameter<m> y_max := StudyArea_forGrid == 'NL' ? Nederland/y_max : Amsterdam/y_max;
+			
+			container Amsterdam
+			{
+				parameter<m> x_min := 75000[m];
+				parameter<m> x_max := 165000[m];
+				parameter<m> y_min := 445000[m];
+				parameter<m> y_max := 530000[m];
+			}
+			
+			container Nederland
+			{
+				parameter<m> x_min := 0[m];
+				parameter<m> x_max := 280000[m];
+				parameter<m> y_min := 300000[m];
+				parameter<m> y_max := 625000[m];
+			}
+			
+			parameter<int16> nr_cols := int16((x_max - x_min) / gridsize);
+			parameter<int16> nr_rows := int16((y_max - y_min) / gridsize);
+
+			unit<spoint> domain :=
+				range(
+					 gridset(
+						 rdc
+						,point(gridsize, -gridsize, rdc)
+						,point(x_min, y_max, rdc)
+						,spoint
+					)
+					,point(0s, 0s)
+					,point(nr_cols, nr_rows)
+				)
+			,	DialogData = "rdc"
+			,	DialogType = "map"
+			{
+				attribute<.>               id             := id(.);
+				attribute<rdc>             point_rd       := id[rdc] + point(0.5f * gridsize, -0.5f * gridsize, rdc);
+				attribute<uint32>          identificatie  := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * 250);
+				attribute<domain_1000m>    grid_1000m_rel := id(.)[domain_1000m];
+				
+			}
+			
+			unit<uint32> points_100m := Subset(isDefined(domain/id))
+			,	DialogData = "geometry"
+			,	DialogType = "map"
+			{
+				attribute<rdc> 	                geometry  := domain/point_rd[nr_OrgEntity];	
+				attribute<rdc>                  point     := geometry;
+				attribute<uint32>               id        := domain/identificatie[nr_OrgEntity];
+				
+				attribute<float32>              x         := PointCol(geometry);
+				attribute<float32>              y         := PointRow(geometry);
+				
+				attribute<uint32>               nr_inwoners := MakeDefined(rjoin(geometry, /SourceData/inwoners/geometry, /SourceData/inwoners/nr_inwoners),0);
+				
+				attribute<NL_grid/domain>       NL_grid_domain_rel  := geometry[NL_grid/domain];
+				attribute<bool>                 IsNederland         := IsDefined(point_in_polygon(geometry, SourceData/RegioIndelingen/Provincies/Geometry));
+				
+				unit<uint32> MakePoints_100m_NL := subset(IsNederland)
+				,	DialogData = "geometry"
+				,	DialogType = "map"
+				,	FreeData = "false"
+				,	StorageName     = "%LocalDataDir%/OVGTFS/Points_100m_NL.fss"
+				{
+					attribute<rdc> 	                geometry  := points_100m/geometry[nr_OrgEntity];
+					attribute<rdc> 	                point     := geometry;
+					attribute<uint32>               id        := points_100m/id[nr_OrgEntity];
+					attribute<NL_grid/domain>       NL_grid_domain_rel  := geometry[NL_grid/domain];
+					attribute<string>               label     := 'p'+string(id), DialogType = "LabelText";
+					attribute<string>               name      := label;
+					attribute<uint32>               nr_inwoners := ../nr_inwoners[nr_OrgEntity];
+				}
+				unit<uint32> Points_100m_NL
+				:	DialogData = "geometry"
+				,	DialogType = "map"
+				,	FreeData = "false"
+				,	StorageName     = "%LocalDataDir%/OVGTFS/Points_100m_NL.fss"
+				,	StorageReadOnly = "true"
+				{
+					attribute<rdc> 	                geometry;
+					attribute<NL_grid/domain>       per_grid := geometry[NL_grid/domain];
+					attribute<rdc> 	                point;
+					attribute<uint32>               id;
+					attribute<NL_grid/domain>       NL_grid_domain_rel;
+					attribute<string>               label: DialogType = "LabelText";
+					attribute<string>               name;
+					attribute<uint32>               nr_inwoners;
+				}
+			}
+			
+			///////////////////////
+			parameter<int16> nr_cols_500m := int16((x_max - x_min) / gridsize_500m);
+			parameter<int16> nr_rows_500m := int16((y_max - y_min) / gridsize_500m);
+			
+			unit<spoint> domain_500m_untiled :=
+				range(
+					 gridset(
+						 rdc
+						,point(gridsize_500m, -gridsize_500m, rdc)
+						,point(x_min, y_max, rdc)
+						,spoint
+					)
+					,point(0s, 0s)
+					,point(nr_cols_500m, nr_rows_500m)
+				)
+			,	DialogData = "rdc"
+			{
+				attribute<domain>      grid_100m_rel    := id(.)[domain];
+			}
+
+			unit<spoint> domain_500m := TiledUnit(Point(1000s, 1200s, domain_500m_untiled))
+			{
+				attribute<.>               id               := id(.);
+				attribute<rdc>             point_rd         := id[rdc] + point(0.5f * gridsize_500m, -0.5f * gridsize_500m, rdc);
+				attribute<uint32>          identificatie    := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * 250);
+				attribute<string>          id_name          := 'p' + string(identificatie);
+			}
+			
+			unit<uint32> points_500m := Subset(isDefined(domain_500m/id))
+			,	DialogData = "geometry"
+			,	DialogType = "map"
+			{
+				attribute<rdc> 	                geometry  := domain_500m/point_rd[nr_OrgEntity];	
+				attribute<uint32>               id        := domain_500m/identificatie[nr_OrgEntity];
+				
+				attribute<float32>              x         := PointCol(geometry);
+				attribute<float32>              y         := PointRow(geometry);
+				
+				attribute<NL_grid/domain_500m> NL_grid_domain_500m_rel  := geometry[NL_grid/domain_500m];	
+			}
+			
+			///////////////////////
+			parameter<int16> nr_cols_1000m := int16((x_max - x_min) / gridsize_1000m);
+			parameter<int16> nr_rows_1000m := int16((y_max - y_min) / gridsize_1000m);
+			
+			unit<spoint> domain_1000m_untiled :=
+				range(
+					 gridset(
+						 rdc
+						,point(gridsize_1000m, -gridsize_1000m, rdc)
+						,point(x_min, y_max, rdc)
+						,spoint
+					)
+					,point(0s, 0s)
+					,point(nr_cols_1000m, nr_rows_1000m)
+				)
+			,	DialogData = "rdc"
+			{
+				attribute<domain>      grid_100m_rel    := id(.)[domain];
+			}
+
+			unit<spoint> domain_1000m := TiledUnit(Point(1000s, 1200s, domain_1000m_untiled))
+			{
+				attribute<.>               id               := id(.);
+				attribute<rdc>             point_rd         := id[rdc] + point(0.5f * gridsize_1000m, -0.5f * gridsize_1000m, rdc);
+				attribute<uint32>          identificatie    := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * 250);
+			}
+			
+			unit<uint32> points_1000m := Subset(isDefined(domain_1000m/id))
+			,	DialogData = "geometry"
+			,	DialogType = "map"
+			{
+				attribute<rdc> 	                geometry  := domain_1000m/point_rd[nr_OrgEntity];	
+				attribute<uint32>               id        := domain_1000m/identificatie[nr_OrgEntity];
+				
+				attribute<float32>              x         := PointCol(geometry);
+				attribute<float32>              y         := PointRow(geometry);
+				
+				attribute<NL_grid/domain_1000m> NL_grid_domain_1000m_rel  := geometry[NL_grid/domain_1000m];	
+			}
+			
+			///////////////////////
+			parameter<int16> nr_cols_5000m := int16((x_max - x_min) / gridsize_5000m);
+			parameter<int16> nr_rows_5000m := int16((y_max - y_min) / gridsize_5000m);
+			
+			unit<spoint> domain_5000m_untiled :=
+				range(
+					 gridset(
+						 rdc
+						,point(gridsize_5000m, -gridsize_5000m, rdc)
+						,point(x_min, y_max, rdc)
+						,spoint
+					)
+					,point(0s, 0s)
+					,point(nr_cols_5000m, nr_rows_5000m)
+				)
+			,	DialogData = "rdc"
+			{
+				attribute<domain>      grid_100m_rel    := id(.)[domain];
+			}
+
+			unit<spoint> domain_5000m := TiledUnit(Point(1000s, 1200s, domain_5000m_untiled))
+			{
+				attribute<.>               id               := id(.);
+				attribute<rdc>             point_rd         := id[rdc] + point(0.5f * gridsize_5000m, -0.5f * gridsize_5000m, rdc);
+				attribute<uint32>          identificatie    := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * 250);
+			}
+			
+			unit<uint32> points_5000m := Subset(isDefined(domain_5000m/id))
+			,	DialogData = "geometry"
+			,	DialogType = "map"
+			{
+				attribute<rdc> 	                geometry  := domain_5000m/point_rd[nr_OrgEntity];	
+				attribute<uint32>               id        := domain_5000m/identificatie[nr_OrgEntity];
+				
+				attribute<float32>              x         := PointCol(geometry);
+				attribute<float32>              y         := PointRow(geometry);
+				
+				attribute<NL_grid/domain_5000m> NL_grid_domain_5000m_rel  := geometry[NL_grid/domain_5000m];	
+			}
+		}
+
+	}
+	
+	#include<Classifications.dms>
+	
+	container ModelParameters : using = "units"
+	{
+		parameter<string>   FileDate                     := '20191007';
+		parameter<string>   AnalysisDate                 := '20191008';
+
+		parameter<string>   Orgset                       := 'PC4';   
+		parameter<string>   Destset                      := 'Inhabitants'; 
+
+		parameter<string>   Arrival_or_Departure_at_time := 'Departure'; // 'Arrival'  'Departure'
+	
+		parameter<m>        MaxTransferDistKm            := 500[m];                      //Maximale euclidische loopafstand tussen OV-haltes voor overstappen, in meters.
+		parameter<float32>  MaxODconn                    := 25f;                       //Maximum aantal haltes dat bij de org of de dest wordt gezocht
+		parameter<min_f>    MaxWalkingTime_Org2Stop      := 30[min_f];                      //Maximum looptijd van org naar eerste halte, in seconden. x  MaxWalkingDistSelection_Org2Stop
+		parameter<min_f>    MaxWalkingTime_Stop2Dest     := 30[min_f];                      //Maximum looptijd van de laatste stop naar dest, in seconden. x
+		parameter<min_f>    MaxBikingTime_Org2Stop       := 30[min_f];                      //Maximum fietstijd van org naar eerste halte, in seconden. x
+		parameter<min_f>    MaxBikingTime_Stop2Dest      := 30[min_f];                      //Maximum fietstijd van laatste halte naar dest, in seconden. x
+		parameter<min_f>    MaxWalkingTime_Org2Dest      := 30[min_f];                 //Maximale looptijd wanneer er direct van org naar dest locatie wordt gelopen, in seconden.
+		parameter<min_f>    MaxBikingTime_Org2Dest       := 30[min_f];                 //Maximale fietstijd wanneer er direct van org naar dest locatie wordt gefietst, in seconden.
+		parameter<min_f>    MaxOVTime                    := 30[min_f];                 //Maximale reistijd met OV. Te gebruiken om de rekentijd te verkorten. LET OP: hierdoor worden mogelijk de verste locaties niet bereikt. Wannneer een distance decay wordt gebruikt is niet zo erg. Maar bij een volledige OD wel! 
+		parameter<min_f>    MaxCarTime                   := 30[min_f];                //Maximale reistijd met lopen/fiets/auto //120
+		parameter<min_f>    OngelijkvloersPenalty        := 0[min_f];                 //Is er sprake van een halte waar je veel verticale afstand moet afleggen? Dan kun je daar een tijd penalty voor geven bij het overstappen, in seconden.
+			
+		parameter<km_hr>    WalkingSpeed_kmhr       := 4.8[km_hr];
+		parameter<km_hr>    BikingSpeed_kmhr        := 16[km_hr];
+			
+		//distance decay parameters, calculated and provided by PBL
+		parameter<float32> car_a   := -8.65786f;
+		parameter<float32> car_b   := 2.492099f;
+		parameter<float32> car_c   := 0.011641f;
+		parameter<float32> bike_a  := -7.95686f;
+		parameter<float32> bike_b  := 2.675059f;
+		parameter<float32> bike_c  := 0.011981f;
+		parameter<float32> ov_a    := -12.3301f;
+		parameter<float32> ov_b    := 2.907621f;
+		parameter<float32> ov_c    := 0.012824f;
+		
+		container Advanced
+		{
+			parameter<string>   PrevDate                := string(uint32(AnalysisDate) - 1);
+			parameter<string>   Date_prefix             := substr(AnalysisDate, 0, 4) + '/' + substr(AnalysisDate, 4, 2) + '/' +  substr(AnalysisDate, 6, 2);
+			parameter<Weekdays> Today                   := 1[Weekdays];
+			parameter<Weekdays> Yesterday               := Weekdays/PrevRef[Today];
+			parameter<string>   StudyArea               := 'NL'; //'NL' 'Amsterdam'                             //studyarea tbv trip selecties
+			parameter<string>   NetwerkExtent           := 'Nederland'; //'Amsterdam' 'Nederland'               //netwerk schaal
+			parameter<string>   Dest_location_scale     := '5000m'; //'500m' '1000m' '5000m'   100m                  //dest punten schaal
+			parameter<m_s>      WalkingSpeed            := WalkingSpeed_kmhr / 3600[s_f / hr_f] * 1000[m / km];
+			parameter<m_s>      BikingSpeed             := BikingSpeed_kmhr / 3600[s_f / hr_f] * 1000[m / km];
+			parameter<m_s>      TransferEffectiveSpeed  := 0.93[m_s]; // 4/1.2= 3.33 km/h --> 0.93 m/s  // expressed in kilometers per hour, modified for manhattan distances
+			parameter<string>   DestSet_string          := Destset + '_' + Dest_location_scale;
+			parameter<string>   fileNamePrefix          :=  '%LocalDataDir%/GeoDMS_Academy/Output/';  //Locatie waar output files moeten worden opgeslagen.
+		
+		
+			unit<uint32> SampleDay := subset(Time/Day = 0) //Hier worden de analyse tijdstippen opgegeven. LET OP: Verander je deze dan zul je ook de NDW_meetmomenten/time moeten aanpassen. En de ChosenMoments ook wanneer er meer/minder momenten opgegeven zijn.
+			{
+				unit<uint8> ChosenHours : nrofrows = 1
+				{
+					attribute<uint32> values : [7];
+				}
+				unit<uint8> ChosenMinutes : nrofrows = 4
+				{
+					attribute<uint32> values : [0,3,7,16];
+				}
+				unit<uint8> HoursMinutes := combine_uint8(ChosenHours, ChosenMinutes)
+				{
+					attribute<uint32> Hours     := ChosenHours/values[nr_1];
+					attribute<uint32> Minutes   := ChosenMinutes/values[nr_2];
+					attribute<string> str       := '(hour == '+string(Hours)+'[hours] && minute == '+string(Minutes)+' && second == 0)';
+				}
+				
+				attribute<Hours>   Hour            := rlookup(Time/Hour[Nr_OrgEntity], Hours/Hour);
+				attribute<uint32>  Minute          := Time/Minute[Nr_OrgEntity];
+				attribute<uint32>  Second          := Time/Second[Nr_OrgEntity];
+				
+				attribute<bool>    ChosenMoments   := =AsList(HoursMinutes/str,' || ');
+				
+				attribute<string>  LabelText       := Time/LabelText[Nr_OrgEntity], DialogType = "LabelText";
+				attribute<string>  TemplatableText := Time/TemplatableText[Nr_OrgEntity];
+				
+				unit<uint32> Hours: NrOfRows = 24 
+				{
+					attribute<uint32> Hour      := id(.);
+					attribute<string> LabelText := string(Hour) + 'h', DialogType = "LabelText";
+				}
+			}
+			
+			unit<uint32> MeasureMoments := subset(SampleDay/ChosenMoments)
+			{
+				attribute<Time>    Moment := SampleDay/Nr_OrgEntity[Nr_OrgEntity];
+				attribute<string>  Name   := Time/TemplatableText[Moment];
+				attribute<string>  Label  := name, DialogType = "LabelText";
+			}
+		
+			container Combines
+			{
+				unit<uint32> Dijkstra_attributes : nrofrows = 3
+				{
+					attribute<string>    name : ['Impedance','OrgZone_rel','DstZone_rel'];
+				}
+				unit<uint32> MomentXattributes := combine(MeasureMoments,Dijkstra_attributes)
+				{
+					attribute<string> MomentName       := MeasureMoments/name[nr_1];
+					attribute<string> DijkstraAttrName := Dijkstra_attributes/name[nr_2];
+					attribute<string> name             := MomentName + '_' + DijkstraAttrName;
+				}
+			}
+			
+			unit<uint32> TransitionType_list : nrofrows = 4
+			{
+				attribute<string> Type     : ['Org2Stop'     ,'Org2Stop'     ,'Stop2Dest'    ,'Stop2Dest'];
+				attribute<string> Mode     : ['Walk'         ,'Bike'         ,'Walk'         ,'Bike'];
+				attribute<string> FromTime : ['FromTime_Walk','FromTime_Bike','FromTime_Walk','FromTime_Bike'];
+				attribute<string> ToTime   : ['ToTime_Walk'  ,'ToTime_Bike'  ,'ToTime_Walk'  ,'ToTime_Bike'];
+				attribute<string> OrgDest  : ['Org'          ,'Org'          ,'Dest'         ,'Dest'];
+				attribute<string> TypeMode := Type + '_' + left(Mode, 1);
+				attribute<min_f>  ModeMax  := ='union_data(.,MaxWalkingTime_Org2Stop,MaxBikingTime_Org2Stop,MaxWalkingTime_Stop2Dest,MaxBikingTime_Stop2Dest)';
+			}
+			
+			unit<uint32> Export_CombinationTypes : nrofrows = 6 //Geef hieraan welke combinaties van vervoersmiddelen er gegeneerd moeten worden. Bij combinaties, wordt er per OD-paar de korste reistijd gekozen.
+			{
+				attribute<string> name : 
+				[
+					'W_W'                     //direct lopen vanaf org naar dest.
+					,'B_B'                     //direct fietsen vanaf org naar dest.
+					,'W_OV_W'                  //vanaf org lopen, dan OV, dan lopen naar dest.
+					,'B_OV_W'                  //vanaf org fietsen, dan OV, dan lopen naar dest.
+					,'W_OV_W_with_WW'          //vanaf org lopen, dan OV, dan lopen naar dest; gecombineerd met direct lopen vanaf org naar dest. (alle voorzieningen en banen)
+					,'B_OV_W_with_BB'          //vanaf org fietsen, dan OV, dan lopen naar dest; gecombineerd met direct fietsen vanaf org naar dest.
+				];
+			}
+		}
+	}
+
+	
+	
+	#include<SourceData.dms>
+	
+	#include<NetworkSetup.dms>
+	
+	#include<Templates.dms>
+}

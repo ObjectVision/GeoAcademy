@@ -1,0 +1,61 @@
+unit<uint32> OSM 
+:	StorageName = "= '%ProjDir%/Data/Pedestrian_network_20200117.fss'"
+,	StorageReadOnly = "true"
+{
+	attribute<geometries/rdc>               line (arc);
+	attribute<classifications/OSM/wegtype>  wegtype;
+	attribute<string>                       wegtype_label;
+	attribute<float32>                      length        := arc_length(line, float32);
+	attribute<int32>                        maxspeed;
+	attribute<float32>                      congestion_speed;
+	attribute<float32>                      congestion_flow;
+	
+	container MakeConnectedRoads
+	{
+		unit <uint32> LinkSet := arc2segm(../line) 
+		,	DialogData = "segments"
+		,	DialogType = "Map"
+		{
+			attribute<m>                             lengte        := arc_length(segments, m);
+			attribute<bool>                          isConnected   := all(pointset/isConnected, pointset/ArcID);
+
+			unit<uint32> pointset := Union_Unit(LinkSet, LinkSet)
+			{
+				attribute<geometries/rdc>   point        := Union_Data(pointset, LinkSet/point, LinkSet/nextpoint);
+				attribute<bool>             isConnected  := isNull(rlookup(point, NodesNotConnected/point));
+				attribute<Lines>            roadsnr      := Union_Data(pointset, LinkSet/SequenceNr, LinkSet/SequenceNr);
+				attribute<LinkSet>          ArcID        := value(ID(pointset) % nrofrows(LinkSet), LinkSet);
+				attribute<uint32>           VolgNr       := ID(pointset) / nrofrows(LinkSet);
+			}
+			attribute<geometries/rdc> segments(arc) := points2sequence(pointset/point, pointset/ArcID, pointset/VolgNr);
+		}
+		unit<uint32> NodeSet := unique(LinkSet/pointset/point)
+		,	DialogData = "Values"
+		,	DialogType = "Map"
+		{
+			attribute<geometries/rdc>   Values;
+			attribute<Linkset>          LinkSetnr := rlookup(Values, LinkSet/point);
+			attribute<Lines>            roadsnr := LinkSet/SequenceNr[LinkSetnr];
+		}
+		attribute<NodeSet> F1(LinkSet)  := rlookup(LinkSet/point,     NodeSet/Values);
+		attribute<NodeSet> F2(LinkSet)  := rlookup(LinkSet/nextpoint, NodeSet/Values);
+
+		unit<uint32> networks := connected_parts(F1, F2)
+		{
+			attribute<uint32>   nr_nodes    := sum(const(1, NodeSet, uint32), partnr);
+			attribute<float32>  Lengte      := sum(LinkSet/lengte[NodeSet/LinkSetnr], partnr);
+			parameter<uint32>   MaxNrNodex  := max(networks/nr_nodes);
+			parameter<networks> main        := rlookup(MaxNrNodex, nr_nodes); // we gaan ervan uit dat het netwerk met de meeste nodes het hoofd netwerk is
+		}
+		unit<uint32> NodesNotConnected := Subset(networks/partnr <> networks/main)
+		{
+			attribute<geometries/rdc> point := NodeSet/Values[Nr_OrgEntity];
+		}
+	}
+	
+	unit<uint32> result := Subset(MakeConnectedRoads/Linkset/isConnected)
+	{
+		attribute<geometries/rdc>         geometry (arc)                := MakeConnectedRoads/Linkset/Segments[nr_OrgEntity];
+		attribute<float32>                length                        := arc_length(geometry, float32);
+	}
+}
