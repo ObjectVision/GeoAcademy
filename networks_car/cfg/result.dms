@@ -19,10 +19,64 @@ container GeoDMS_Academy_Network_Car
 	container Geography: Using = "Units"
 	{
 		unit<fpoint> rdc_base : Format   = "EPSG:28992", DialogData = "ngr_layer";
-		unit<fpoint> rdc     := range(rdc_base, point(0f,300000f), point(280000f,625000f));
+		unit<fpoint> rdc     := range(rdc_base, point(x_min,y_min), point(x_max,y_max));
 		
 		#include<ngr_layer.dms>
-	}	
+		
+		parameter<m> x_min := 0[m];
+		parameter<m> x_max := 280000[m];
+		parameter<m> y_min := 300000[m];
+		parameter<m> y_max := 625000[m];
+
+		container grid_500m      := define_grid(500[m], .);
+
+
+		template define_grid
+		{
+			// begin case parameters
+			parameter<m> gridsize;
+			container src;
+			// end case parameters
+
+			parameter<int16> nr_cols := int16((src/x_max - src/x_min) / gridsize);
+			parameter<int16> nr_rows := int16((src/y_max - src/y_min) / gridsize);
+
+			unit<spoint> domain :=
+				range(
+					 gridset(
+						 rdc
+						,point(float32(gridsize), float32(-gridsize), rdc)
+						,point(src/x_min, src/y_max, rdc)
+						,spoint
+					)
+					,point(0s, 0s)
+					,point(nr_cols,nr_rows)
+				)
+			,	DialogData = "rdc";
+		}
+
+		container Impl_500m   := potrange_T(500[m],5000[m]);
+		
+		template potrange_T
+		{
+			parameter<m>   gridgrootte;
+			parameter<m>   afkapstraal;
+			//
+			parameter<float32> straal       := afkapstraal / gridgrootte;
+			unit<uint32>       Dist2Range;
+
+			unit<spoint> potRange:= range(spoint, point(-int16(straal), -int16(straal)), point(int16(straal) + 1s, int16(straal) + 1s))
+			{
+				attribute<Dist2Range> distMatr        := dist2(point(0s, 0s, .), Dist2Range);
+				attribute<float32>    dist            := sqrt(float32(distMatr));
+				attribute<float32>    rev_dist        := max_elem(straal - dist, 0f);
+				parameter<float32>    rev_dist_max    := max(rev_dist);
+				attribute<float32>    rev_dist_scaled := rev_dist / rev_dist_max;
+			}
+		}
+
+		
+	}
 	
 	container SourceData: Using = "Units;Geography"
 	{

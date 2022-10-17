@@ -85,7 +85,7 @@ container Templates : using = "units;Classifications;geography"
 				}
 			}
 			
-			unit<uint32> NodeSet  := unique(LinkSet/PointSet/Point);
+			unit<uint32> NodeSet  := unique(LinkSet/PointSet/Point), DialogData = "values", DialogType = "map";
 			
 			attribute<NodeSet> F1 (LinkSet)              := rlookup(LinkSet/Point,     NodeSet/Values);
 			attribute<NodeSet> F2 (LinkSet)              := rlookup(LinkSet/nextpoint, NodeSet/Values);
