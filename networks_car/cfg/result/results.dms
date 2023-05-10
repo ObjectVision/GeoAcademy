@@ -73,9 +73,34 @@ container Analysis : Using = "Units;SourceData;Geography"
 			, NetworkSpec/OrgToDest/F1
 			, NetworkSpec/OrgToDest/F2
 			//
-			, NetworkSpec/OrgToDest/LinkSet/roadtype != classifications/OSM/roadtype/V/motorway  && NetworkSpec/OrgToDest/LinkSet/roadtype != classifications/OSM/roadtype/V/motorway_link // motor way en motor way link, snelwegen zijn niet bidirectional
+			, NetworkSpec/OrgToDest/LinkSet/roadtype != Classifications/osm/roadtype/V/motorway  && NetworkSpec/OrgToDest/LinkSet/roadtype != classifications/OSM/roadtype/V/motorway_link // motor way en motor way link, snelwegen zijn niet bidirectional
 			, NetworkSpec/OrgToDest/nr_orgNode
 			, NetworkSpec/OrgToDest/nr_destNode
 			, MaxInhabitants, dest/Inhabitants_2019[float32]
 		);
+	
+	container Dijkstra_nearest
+	{
+		attribute<float32> TraveltimeToNearestDest (NetworkSpec/OrgToDest/NodeSet) := 
+			dijkstra_s('bidirectional(link_flag);startPoint(Node_rel)'
+				, NetworkSpec/OrgToDest/impedance
+				, NetworkSpec/OrgToDest/F1
+				, NetworkSpec/OrgToDest/F2
+				///
+				, NetworkSpec/OrgToDest/LinkSet/roadtype != classifications/OSM/roadtype/v/motorway && NetworkSpec/OrgToDest/LinkSet/roadtype != classifications/OSM/roadtype/v/motorway_link
+				, NetworkSpec/OrgToDest/nr_orgNode
+			), KeepData = "true";
+			
+		attribute<float32> TraveltimeToNearestDest_perDest (dest)                  := TraveltimeToNearestDest[NetworkSpec/OrgToDest/nr_destNode];
+
+		container Interpolate
+		{
+			attribute<float32> Sum_attribute    (grid_500m/domain) := sum(TraveltimeToNearestDest_perDest, dest/geometry[grid_500m/domain]);
+			attribute<float32> Count_attribute  (grid_500m/domain) := sum(TraveltimeToNearestDest_perDest > 0f ? 1f : 0f , dest/geometry[grid_500m/domain]);
+			attribute<float32> Potential_sum    (grid_500m/domain) := potential(Sum_attribute, /Geography/Impl_500m/potrange/rev_dist_scaled); 
+			attribute<float32> Potential_count  (grid_500m/domain) := potential(Count_attribute, /Geography/Impl_500m/potrange/rev_dist_scaled);
+			
+			attribute<float32> Interpolated     (grid_500m/domain) := Potential_sum / Potential_count;
+		}
+	}
 }
