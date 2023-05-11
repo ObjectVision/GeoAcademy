@@ -41,4 +41,12 @@ container game_of_life
 	}
 	
 	Container simulation := for_each_ind('ne', simulation_parameters/steps/name, simulation_parameters/steps/expr_final);
+	
+	unit<upoint> export_simulation := generation_domain,
+	  StorageName = "%LocalDataProjDir%/sim_result.tif" 
+	, StorageType = "gdalwrite.grid"
+	{
+	   attribute<float32> GridData := = 'simulation/step_' + String(max(simulation_parameters/steps/id)) + '/next_generation';
+	}
+}
 }
