@@ -1,0 +1,1 @@
+conda activate lue_test &&  python .\game_of_life.py 2000 200 1000 ./output/ && conda deactivate
