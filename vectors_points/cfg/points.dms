@@ -94,6 +94,30 @@ container GeoDMS_Academy_Point
 			//This connect operator finds the closest metro station for each school.
 			attribute<SourceData/Primary_Schools_Amsterdam>   Schools_Stations_rel    (SourceData/Primary_Schools_Amsterdam) := connect(Stations, SourceData/Primary_Schools_Amsterdam/geometry);
 			
+		unit<uint32> uq_points := unique(point)
+		{
+			attribute<float32>  x           := PointCol(values);
+			attribute<float32>  y           := PointRow(values);
+		}
+		
+		container DefineICstations 
+		{
+			unit<uint32>                IC_dom                  :=  SourceData/Infrastructuur/IC_Stations/uq;
+			attribute<rdc>              geometry  (IC_dom)      := IC_dom/Geometry;
+			attribute<float32>          x         (IC_dom)      := PointCol(geometry);
+			attribute<float32>          y         (IC_dom)      := PointRow(geometry);
+			
+			attribute<uint32>           point_rel (uq_points)       := connect(geometry, uq_points/values);
+
+			attribute<float32>          x_targetdomain (uq_points)  := PointCol(geometry)[point_rel];
+			attribute<float32>          y_targetdomain (uq_points)  := PointRow(geometry)[point_rel];
+			attribute<float32>          delta_x (uq_points)         := abs(x_targetdomain - uq_points/x)^2f;
+			attribute<float32>          delta_y (uq_points)         := abs(y_targetdomain - uq_points/y)^2f;
+
+			attribute<m>                dist (uq_points)            := sqrt(delta_x + delta_y)[m];
+		}
+			
+			
 			attribute<float32>            x_stations    (SourceData/Primary_Schools_Amsterdam)    := PointCol(Stations)[Schools_Stations_rel];
 			attribute<float32>            y_stations    (SourceData/Primary_Schools_Amsterdam)    := PointRow(Stations)[Schools_Stations_rel];
 			attribute<float32>            x_schools     (SourceData/Primary_Schools_Amsterdam)    := PointCol(Schools);
