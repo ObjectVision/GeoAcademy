@@ -1,7 +1,7 @@
 container GeoDMS_Academy_RelationalModel
 {
 	#include <units.dms>
-	
+
 	container DDL_Create
 	{
 		unit<uint32> Building_short : NrOfRows = 4
@@ -10,13 +10,13 @@ container GeoDMS_Academy_RelationalModel
 			attribute<units/year> ConstructionYear :[2010,2012,2015,2016];
 			attribute<units/m2>   Footprint        :[100,300,250,150];
 		}
-	
+
 		unit<uint32> Building : NrOfRows = 4
 		{
 			attribute<string>     id               := data/element/values[value(id(.) * data/nrAttr, data/element)];
 			attribute<units/year> ConstructionYear := data/element/values[value(id(.) * data/nrAttr + 1, data/element)][units/year];
 			attribute<units/m2>   Footprint        := data/element/values[value(id(.) * data/nrAttr + 2, data/element)][units/m2];
-			
+
 			container data
 			{
 				parameter<uint32> nrAttr := 3;
@@ -32,17 +32,17 @@ container GeoDMS_Academy_RelationalModel
 				}
 			}
 		}
-		
+
 		unit<uint32> Apartment : NrOfRows = 6
 		{
-			attribute<string>     id             := data/element/values[value(id(.) * data/nrAttr, data/element)];
-			attribute<string>     Street         := data/element/values[value(id(.) * data/nrAttr + 1, data/element)];
-			attribute<uint32>     Number         := data/element/values[value(id(.) * data/nrAttr + 2, data/element)][uint32];
-			attribute<string>     ZipCode        := data/element/values[value(id(.) * data/nrAttr + 3, data/element)];
-			attribute<string>     Town           := data/element/values[value(id(.) * data/nrAttr + 4, data/element)];
-			attribute<bool>       IsResidential  := data/element/values[value(id(.) * data/nrAttr + 5, data/element)][bool];
-			attribute<units/m2>   Surface        := data/element/values[value(id(.) * data/nrAttr + 6, data/element)][units/m2];
-			
+			attribute<string>   id            := data/element/values[value(id(.) * data/nrAttr, data/element)];
+			attribute<string>   Street        := data/element/values[value(id(.) * data/nrAttr + 1, data/element)];
+			attribute<uint32>   Number        := data/element/values[value(id(.) * data/nrAttr + 2, data/element)][uint32];
+			attribute<string>   ZipCode       := data/element/values[value(id(.) * data/nrAttr + 3, data/element)];
+			attribute<string>   Town          := data/element/values[value(id(.) * data/nrAttr + 4, data/element)];
+			attribute<bool>     IsResidential := data/element/values[value(id(.) * data/nrAttr + 5, data/element)][bool];
+			attribute<units/m2> Surface       := data/element/values[value(id(.) * data/nrAttr + 6, data/element)][units/m2];
+
 			container data
 			{
 				parameter<uint32> nrAttr := 7;
@@ -60,11 +60,11 @@ container GeoDMS_Academy_RelationalModel
 				}
 			}
 		}
-		
+
 		unit<uint32> ApartmentBuildingRelation : NrOfRows = 7
 		{
-			attribute<string>     ApartmentId   := data/element/values[value(id(.) * data/nrAttr, data/element)];
-			attribute<string>     BuildingId    := data/element/values[value(id(.) * data/nrAttr + 1, data/element)];
+			attribute<string> ApartmentId := data/element/values[value(id(.) * data/nrAttr, data/element)];
+			attribute<string> BuildingId  := data/element/values[value(id(.) * data/nrAttr + 1, data/element)];
 
 			container data
 			{
@@ -84,12 +84,12 @@ container GeoDMS_Academy_RelationalModel
 				}
 			}
 		}
-		
+
 		unit<uint32> AverageTemperature : NrOfRows = 3
 		{
-			attribute<string>     ZipCode       := data/element/values[value(id(.) * data/nrAttr, data/element)];
-			attribute<int32>      Temperature   := data/element/values[value(id(.) * data/nrAttr + 1, data/element)][int32];
-			
+			attribute<string> ZipCode     := data/element/values[value(id(.) * data/nrAttr, data/element)];
+			attribute<int32>  Temperature := data/element/values[value(id(.) * data/nrAttr + 1, data/element)][int32];
+
 			container data
 			{
 				parameter<uint32> nrAttr := 2;
@@ -105,7 +105,7 @@ container GeoDMS_Academy_RelationalModel
 			}
 		}
 	}
-	
+
 	container DML_Select
 	{
 		container Select_From
@@ -128,83 +128,64 @@ container GeoDMS_Academy_RelationalModel
 				attribute<string> Town    := DDL_Create/Apartment/Town;
 			}
 		}
-		
+
 		container Select_From_Where
 		{
-			unit<uint32> SingleAttSelection := subset(DDL_Create/Apartment/Town == 'BTown')
-			{
-				attribute<string> Street  := DDL_Create/Apartment/Street[Nr_OrgEntity];
-				attribute<uint32> Number  := DDL_Create/Apartment/Number[Nr_OrgEntity];
-				attribute<string> ZipCode := DDL_Create/Apartment/ZipCode[Nr_OrgEntity];
-				attribute<string> Town    := DDL_Create/Apartment/Town[Nr_OrgEntity];
-			}
-			
-			unit<uint32> MultipleAttSelection := subset(DDL_Create/Apartment/ZipCode == 'AA6681' && DDL_Create/Apartment/Number  == 3)
-			{
-				attribute<string> Street  := DDL_Create/Apartment/Street[Nr_OrgEntity];
-				attribute<uint32> Number  := DDL_Create/Apartment/Number[Nr_OrgEntity];
-				attribute<string> ZipCode := DDL_Create/Apartment/ZipCode[Nr_OrgEntity];
-				attribute<string> Town    := DDL_Create/Apartment/Town[Nr_OrgEntity];
-			}
+			unit<uint32> SingleAttSelection   := select_with_attr_by_cond(DDL_Create/Apartment, DDL_Create/Apartment/Town == 'BTown');
+			unit<uint32> MultipleAttSelection := select_with_attr_by_cond(DDL_Create/Apartment, DDL_Create/Apartment/ZipCode == 'AA6681' && DDL_Create/Apartment/Number  == 3);
 		}
-		
+
 		container Select_From_OrderBy
 		{
 			attribute<DDL_Create/Apartment> ZipOrderAtt (DDL_Create/Apartment) := index(DDL_Create/Apartment/ZipCode);
-				
-			unit<uint32> ZipOrder := range(uint32,0,#DDL_Create/Apartment)
+
+			unit<uint32> ZipOrder := unique(ZipOrderAtt)
 			{
-				attribute<string> Street  := union_data(.,DDL_Create/Apartment/Street[ZipOrderAtt]);
-				attribute<uint32> Number  := union_data(.,DDL_Create/Apartment/Number[ZipOrderAtt]);
-				attribute<string> ZipCode := union_data(.,DDL_Create/Apartment/ZipCode[ZipOrderAtt]);
-				attribute<string> Town    := union_data(.,DDL_Create/Apartment/Town[ZipOrderAtt]);
+				attribute<string> Street  := (DDL_Create/Apartment/Street[ZipOrderAtt])[Values];
+				attribute<uint32> Number  := (DDL_Create/Apartment/Number[ZipOrderAtt])[Values];
+				attribute<string> ZipCode := (DDL_Create/Apartment/ZipCode[ZipOrderAtt])[Values];
+				attribute<string> Town    := (DDL_Create/Apartment/Town[ZipOrderAtt])[Values];
 			}
-			
+
 			attribute<DDL_Create/Apartment> ZipNumberOrderAtt (DDL_Create/Apartment) := index(DDL_Create/Apartment/ZipCode + '_' + string(DDL_Create/Apartment/Number));
-			
-			unit<uint32> ZipNumberOrder := range(uint32,0,#DDL_Create/Apartment)
+
+			unit<uint32> ZipNumberOrder := unique(ZipNumberOrderAtt)
 			{
-				attribute<string> Street  := union_data(.,DDL_Create/Apartment/Street[ZipNumberOrderAtt]);
-				attribute<uint32> Number  := union_data(.,DDL_Create/Apartment/Number[ZipNumberOrderAtt]);
-				attribute<string> ZipCode := union_data(.,DDL_Create/Apartment/ZipCode[ZipNumberOrderAtt]);
-				attribute<string> Town    := union_data(.,DDL_Create/Apartment/Town[ZipNumberOrderAtt]);
+				attribute<string> Street  := (DDL_Create/Apartment/Street[ZipNumberOrderAtt])[Values];
+				attribute<uint32> Number  := (DDL_Create/Apartment/Number[ZipNumberOrderAtt])[Values];
+				attribute<string> ZipCode := (DDL_Create/Apartment/ZipCode[ZipNumberOrderAtt])[Values];
+				attribute<string> Town    := (DDL_Create/Apartment/Town[ZipNumberOrderAtt])[Values];
 			}
 		}
-		
+
 		container Select_From_Where_OrderBy
 		{
-			unit<uint32> Select_From_Where := subset(DDL_Create/Apartment/Town == 'AVillage')
-			{
-				attribute<string> Street  := DDL_Create/Apartment/Street[Nr_OrgEntity];
-				attribute<uint32> Number  := DDL_Create/Apartment/Number[Nr_OrgEntity];
-				attribute<string> ZipCode := DDL_Create/Apartment/ZipCode[Nr_OrgEntity];
-				attribute<string> Town    := DDL_Create/Apartment/Town[Nr_OrgEntity];
-			}
+			unit<uint32> Select_From_Where := select_with_attr_by_cond(DDL_Create/Apartment, DDL_Create/Apartment/Town == 'AVillage');
 
 			attribute<Select_From_Where> ZipOrderAtt (Select_From_Where) := index(Select_From_Where/ZipCode);
 
-			unit<uint32> OrderBy := range(uint32,0,#Select_From_Where)
+			unit<uint32> OrderBy := unique(ZipOrderAtt)
 			{
-				attribute<string> Street  := union_data(.,Select_From_Where/Street[ZipOrderAtt]);
-				attribute<uint32> Number  := union_data(.,Select_From_Where/Number[ZipOrderAtt]);
-				attribute<string> ZipCode := union_data(.,Select_From_Where/ZipCode[ZipOrderAtt]);
-				attribute<string> Town    := union_data(.,Select_From_Where/Town[ZipOrderAtt]);
+				attribute<string> Street  := (Select_From_Where/Street[ZipOrderAtt])[Values];
+				attribute<uint32> Number  := (Select_From_Where/Number[ZipOrderAtt])[Values];
+				attribute<string> ZipCode := (Select_From_Where/ZipCode[ZipOrderAtt])[Values];
+				attribute<string> Town    := (Select_From_Where/Town[ZipOrderAtt])[Values];
 			}
 		}
-		
+
 		container Select_Distinct_From
 		{
 			unit<uint32> Town := unique(DDL_Create/Apartment/Town)
 			{
 				attribute<string> values;
 			}
-			
+
 			unit<uint32> TownZipCode := unique(DDL_Create/Apartment/Town + '_' + DDL_Create/Apartment/ZipCode)
 			{
 				attribute<string> values;
 			}
 		}
-		
+
 		container Select_From_GroupBy
 		{
 			unit<uint32> DefinedTownDomain: nrofrows = 3
@@ -212,11 +193,11 @@ container GeoDMS_Academy_RelationalModel
 				attribute<string> values: ['BTown','AVillage','CCity'];
 			}
 			unit<uint32> DerivedTownDomain := unique(DDL_Create/Apartment/Town);
-			
+
 			attribute<DefinedTownDomain> DefinedTownDomain_rel (DDL_Create/Apartment) := rlookup(DDL_Create/Apartment/Town, DefinedTownDomain/Values);
 			attribute<units/m2>          TownSurface           (DefinedTownDomain)    := sum(DDL_Create/Apartment/Surface, DefinedTownDomain_rel);		
 		}
-		
+
 		container Select_From_InnerJoin_On
 		{
 			container Example_1
@@ -235,38 +216,38 @@ container GeoDMS_Academy_RelationalModel
 					attribute<units/m2>   Footprint        := rjoin(BuildingId, DDL_Create/Building/id, DDL_Create/Building/Footprint);
 				}
 			}
-			
+
 			container Example_2
 			{
 				unit<uint32> CartesianProduct := combine(DDL_Create/Apartment, DDL_Create/Building)
 				{
-					attribute<string> ApartmentId  := DDL_Create/Apartment/id[nr_1];
+					attribute<string> ApartmentId   := DDL_Create/Apartment/id[nr_1];
 					attribute<string> BuildingId    := DDL_Create/Building/id[nr_2];
 					attribute<bool>   JoinCondition := 
 						isDefined(
 							rlookup(
 									ApartmentId + '_' + BuildingId
-									,  DDL_Create/ApartmentBuildingRelation/ApartmentId + '_' + DDL_Create/ApartmentBuildingRelation/BuildingId
+									, DDL_Create/ApartmentBuildingRelation/ApartmentId + '_' + DDL_Create/ApartmentBuildingRelation/BuildingId
 							)
 						);
 					}
 
-				unit<uint32> ResultDomain := subset(CartesianProduct/JoinCondition)
+				unit<uint32> ResultDomain := select_with_org_rel(CartesianProduct/JoinCondition)
 				{
-					attribute<string>     ApartmentId        := CartesianProduct/ApartmentId[nr_OrgEntity];
-					attribute<string>     BuildingId          := CartesianProduct/BuildingId[nr_OrgEntity];
+					attribute<string>     ApartmentId      := CartesianProduct/ApartmentId[org_rel];
+					attribute<string>     BuildingId       := CartesianProduct/BuildingId[org_rel];
 
-					attribute<string>     Street              := rjoin(ApartmentId, DDL_Create/Apartment/id, DDL_Create/Apartment/Street);
-					attribute<uint32>     Number              := rjoin(ApartmentId, DDL_Create/Apartment/id, DDL_Create/Apartment/Number);
-					attribute<string>     ZipCode             := rjoin(ApartmentId, DDL_Create/Apartment/id, DDL_Create/Apartment/ZipCode);
-					attribute<string>     Town                := rjoin(ApartmentId, DDL_Create/Apartment/id, DDL_Create/Apartment/Town);
+					attribute<string>     Street           := rjoin(ApartmentId, DDL_Create/Apartment/id, DDL_Create/Apartment/Street);
+					attribute<uint32>     Number           := rjoin(ApartmentId, DDL_Create/Apartment/id, DDL_Create/Apartment/Number);
+					attribute<string>     ZipCode          := rjoin(ApartmentId, DDL_Create/Apartment/id, DDL_Create/Apartment/ZipCode);
+					attribute<string>     Town             := rjoin(ApartmentId, DDL_Create/Apartment/id, DDL_Create/Apartment/Town);
 
-					attribute<units/Year> ConstructionYear    := rjoin(BuildingId, DDL_Create/Building/id, DDL_Create/Building/ConstructionYear); 
-					attribute<units/m2>   Footprint           := rjoin(BuildingId, DDL_Create/Building/id, DDL_Create/Building/Footprint);
+					attribute<units/Year> ConstructionYear := rjoin(BuildingId, DDL_Create/Building/id, DDL_Create/Building/ConstructionYear); 
+					attribute<units/m2>   Footprint        := rjoin(BuildingId, DDL_Create/Building/id, DDL_Create/Building/Footprint);
 				}
 			}
 		}
-		
+
 		container Select_From_LeftRightJoin_On
 		{
 			unit<uint32> resultdomain := DDL_Create/Apartment
@@ -278,7 +259,7 @@ container GeoDMS_Academy_RelationalModel
 				attribute<int32>  AverageTemperature := rjoin(ZipCode, DDL_Create/AverageTemperature/ZipCode, DDL_Create/AverageTemperature/Temperature);
 			}
 		}
-		
+
 		container Select_From_CrossJoin
 		{
 			unit<uint32> CartesianProduct := combine(DDL_Create/Apartment,DDL_Create/Building)
