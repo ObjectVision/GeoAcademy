@@ -1,0 +1,83 @@
+container Geography: Using = "Units"
+{
+	#include<ngr_layer.dms>
+
+	unit<fpoint>  point_rd_base:
+		DialogData       = "ngr_layer" 
+	,	SpatialReference = "EPSG:28992";
+
+	unit<fpoint> point_rd    := range(point_rd_base, point_xy(0[m],300000[m]), point_xy(280000[m],625000[m]));
+
+	container Studiegebied
+	{
+		parameter<m> left   := 155000[m];
+		parameter<m> right  := 160000[m];
+		parameter<m> bottom := 457500[m]; 
+		parameter<m> top    := 462500[m]; 
+	}
+
+	container gridcel_500m:= Schemas/Grid_spoint(500[m], Studiegebied);
+	container gridcel_100m:= Schemas/Grid_spoint(100[m], Studiegebied);
+	container gridcel_10m: = Schemas/Grid_ipoint( 10[m], Studiegebied);
+
+	container Schemas
+	{
+		template Grid_spoint
+		{
+			// begin case parameters
+			parameter<m> gridsize;
+			container bbox;
+			// einde case parameters
+
+			parameter<int16> nr_cols:= int16((bbox/right - bbox/left)   / gridsize);
+			parameter<int16> nr_rows:= int16((bbox/top   - bbox/bottom) / gridsize);
+
+			unit<spoint> domain :=
+				range(
+					 gridset(
+						 point_rd
+						,point_xy(float32(gridsize), float32(-gridsize), point_rd)
+						,point_xy(bbox/left,bbox/top,point_rd)
+						,spoint
+					)
+					,point_xy(int16(0), int16(0))
+					,point_xy(nr_cols,nr_rows)
+				)
+			,	DialogData = "point_rd"
+			{
+				parameter<m> size := gridsize;
+				attribute<.> id   := id(.);
+				attribute<uint8> test: = const(1b,.);
+			}
+		}
+		template Grid_ipoint
+		{
+			// begin case parameters
+			parameter<m> gridsize;
+			container bbox;
+			// einde case parameters
+
+			parameter<int32> nr_cols:= int32((bbox/right - bbox/left)   / gridsize);
+			parameter<int32> nr_rows:= int32((bbox/top   - bbox/bottom) / gridsize);
+
+			unit<ipoint> domain :=
+				range(
+					 gridset(
+						 point_rd
+						,point_xy(float32(gridsize), float32(-gridsize), point_rd)
+						,point_xy(bbox/left,bbox/top,point_rd)
+						,spoint
+					)
+					,point_xy(int32(0), int32(0))
+					,point_xy(nr_cols,nr_rows)
+				)
+			,	DialogData = "point_rd"
+			{
+				parameter<m> size := gridsize;
+				attribute<.> id   := id(.);
+				attribute<uint8> test: = const(1b,.);
+
+			}
+		}
+	}
+}

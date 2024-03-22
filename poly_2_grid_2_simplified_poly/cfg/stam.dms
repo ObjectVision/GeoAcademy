@@ -1,0 +1,53 @@
+container Poly_2_grid_2_simplified_poly
+{
+	#include <units.dms>
+	#include <geography.dms>
+
+	#include <sourcedata.dms>
+
+	unit<uint2> Direction 
+	{
+		attribute<string> Label : [ 'North', 'East', 'South', 'West'];
+		container V:= for_each_nedv(Label, string(ID(.))+'[..]', void, .);
+		attribute<.> Next    := union_data(., V/West, V/North, V/East, V/South);
+		attribute<.> Reverse := union_data(., V/South, V/West, V/North, V/East);
+	}
+
+	#include <grid2poly_T.dms>
+
+	template SimplifyPolygons_T
+	{
+		// begin case parameters
+		unit<uint32>       ShapeDomain;
+		container          Grid;
+		parameter<float64> simplifyFactor;
+		// end case parameters
+
+		attribute<Geography/point_rd> Shape_geometry(ShapeDomain, poly) := ShapeDomain/geometry;
+
+		attribute<ShapeDomain> ShapeDomain_rel (Grid/domain) := poly2grid_untiled(Shape_geometry, Grid/domain);
+		container SimplifiedPolygons                         := grid2poly_T(Grid/domain, ShapeDomain, ShapeDomain_rel, simplifyFactor);
+	}
+
+	container examples: IntegrityCheck = "GeoDmsVersion() >= 14.1302" 
+	{
+		container simplify_gridsize
+		{
+			container d500_spoint := SimplifyPolygons_T(SourceData/shape, Geography/gridcel_500m, 500.0);
+			container d100_spoint := SimplifyPolygons_T(SourceData/shape, Geography/gridcel_100m, 100.0);
+			container d10_ipoint  := SimplifyPolygons_T(SourceData/shape, Geography/gridcel_10m,   10.0);
+		}
+		container simplify_m10
+		{
+			container d500_spoint := SimplifyPolygons_T(SourceData/shape, Geography/gridcel_500m, 10.0);
+			container d100_spoint := SimplifyPolygons_T(SourceData/shape, Geography/gridcel_100m, 10.0);
+			container d10_ipoint  := SimplifyPolygons_T(SourceData/shape, Geography/gridcel_10m,  10.0);
+		}
+		container no_simplify
+		{
+			container d500_spoint := SimplifyPolygons_T(SourceData/shape, Geography/gridcel_500m, 0.0);
+			container d100_spoint := SimplifyPolygons_T(SourceData/shape, Geography/gridcel_100m, 0.0);
+			container d10_ipoint  := SimplifyPolygons_T(SourceData/shape, Geography/gridcel_10m,  0.0);
+		}
+	}
+}
