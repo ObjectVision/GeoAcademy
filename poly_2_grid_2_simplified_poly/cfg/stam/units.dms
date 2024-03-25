@@ -1,4 +1,0 @@
-container Units
-{
-	unit<float32> m := baseunit('m', float32);
-}

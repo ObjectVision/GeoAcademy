@@ -93,6 +93,6 @@ container SourceData: Using = "Units;Geography"
 
 	unit<uint32> Shape : nrofrows = 4
 	{
-		attribute<point_rd> geometry (poly) := union_data(., circle/geometry, square/geometry , triangles/first/geometry , triangles/second/geometry);
+		attribute<point_rd> geometry (poly) := union_data(., circle/geometry, square/geometry, triangles/first/geometry, triangles/second/geometry);
 	}
 }

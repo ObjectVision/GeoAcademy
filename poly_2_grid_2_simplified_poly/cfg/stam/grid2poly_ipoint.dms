@@ -1,10 +1,10 @@
 // This is the template that uses a grid attribute to make a (simplified) polygonset of connected grid cells with the same attribute value
 // In this template such a set of connected cells is called a zone;
 
-template grid2poly_T 
+template grid2poly_ipoint 
 {
 	// begin case parameters
-	unit<spoint> domain_grid;
+	unit<ipoint> domain_grid;
 	unit<uint32> Zone;
 	attribute<Zone> zone_rel (domain_grid);
 	parameter<float64> simplifyFactor;
@@ -13,11 +13,11 @@ template grid2poly_T
 	parameter<Zone> NoZone := #Zone + lowerbound(Zone); // outside study area indicator
 
 	// Segments := horizontale raster-randjes met ongelijke boven en onder zones + verticale raster-randjes met ongelijke linker en rechter zones
-	unit<int16> rows := range(uint32, pointrow(lowerbound(domain_grid)), pointrow(upperbound(domain_grid)));
-	unit<int16> cols := range(uint32, pointcol(lowerbound(domain_grid)), pointcol(upperbound(domain_grid)));
+	unit<int32> rows := range(int32, pointrow(lowerbound(domain_grid)), pointrow(upperbound(domain_grid)));
+	unit<int32> cols := range(int32, pointcol(lowerbound(domain_grid)), pointcol(upperbound(domain_grid)));
 
-	unit<int16>  HorizontalLine := range(int16, lowerbound(rows), upperbound(rows)+1s);
-	unit<int16>  VerticalLine   := range(int16, lowerbound(cols), upperbound(cols)+1s);
+	unit<int32>  HorizontalLine := range(int32, lowerbound(rows), upperbound(rows)+1[rows]);
+	unit<int32>  VerticalLine   := range(int32, lowerbound(cols), upperbound(cols)+1[cols]);
 
 	unit<uint32> Point := combine(VerticalLine, HorizontalLine)
 	{
@@ -39,14 +39,14 @@ template grid2poly_T
 
 	unit<uint32> HorizontalSegment := combine(cols, HorizontalLine)
 	{
-		attribute<domain_grid> North             := point_xy(first_rel, second_rel-1s, domain_grid);
+		attribute<domain_grid> North             := point_xy(first_rel, second_rel-1[HorizontalLine], domain_grid);
 		attribute<domain_grid> South             := point_xy(first_rel, second_rel   , domain_grid);
 		attribute<bool>        isBoundarySegment := MakeDefined(south->zone_rel, NoZone) != MakeDefined(North->zone_rel, NoZone);
 	}
 
 	unit<uint32> VerticalSegment := combine(VerticalLine, rows)
 	{
-		attribute<domain_grid> West              := point_xy(first_rel-1s, second_rel, domain_grid);
+		attribute<domain_grid> West              := point_xy(first_rel-1[VerticalLine], second_rel, domain_grid);
 		attribute<domain_grid> East              := point_xy(first_rel   , second_rel, domain_grid);
 		attribute<bool>        isBoundarySegment := MakeDefined(West->zone_rel, max(zone_rel)+1[zone]) != MakeDefined(East->zone_rel, max(zone_rel)+1[zone]);
 	}
@@ -59,8 +59,8 @@ template grid2poly_T
 		attribute<domain_grid>    North      := collect_by_cond(., HorizontalSegment/North);
 		attribute<domain_grid>    South      := collect_by_cond(., HorizontalSegment/South);
 
-		attribute<Point>          F1         := combine_data(Point,  first_rel    [VerticalLine], second_rel);
-		attribute<Point>          F2         := combine_data(Point, (first_rel+1s)[VerticalLine], second_rel);
+		attribute<Point>          F1         := combine_data(Point,  first_rel         [VerticalLine], second_rel);
+		attribute<Point>          F2         := combine_data(Point, (first_rel+1[cols])[VerticalLine], second_rel);
 	}
 
 	unit<uint32> VerticalBoundarySegment := select(verticalSegment/isBoundarySegment)
@@ -71,8 +71,8 @@ template grid2poly_T
 		attribute<domain_grid>  East       := collect_by_cond(., VerticalSegment/East);
 		attribute<domain_grid>  West       := collect_by_cond(., VerticalSegment/West);
 
-		attribute<Point>        F1         := combine_data(Point, first_rel,  second_rel    [HorizontalLine]);
-		attribute<Point>        F2         := combine_data(Point, first_rel, (second_rel+1s)[HorizontalLine]);
+		attribute<Point>        F1         := combine_data(Point, first_rel,  second_rel         [HorizontalLine]);
+		attribute<Point>        F2         := combine_data(Point, first_rel, (second_rel+1[rows])[HorizontalLine]);
 	}
 
 	unit<uint32> BoundarySegment := union_unit(HorizontalBoundarySegment, VerticalBoundarySegment)

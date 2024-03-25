@@ -16,11 +16,11 @@ container Geography: Using = "Units"
 		parameter<m> top    := 462500[m]; 
 	}
 
-	container gridcel_500m:= Schemas/Grid_spoint(500[m], Studiegebied);
-	container gridcel_100m:= Schemas/Grid_spoint(100[m], Studiegebied);
-	container gridcel_10m: = Schemas/Grid_ipoint( 10[m], Studiegebied);
+	container gridcel_500m := Templates/Grid_spoint(500[m], Studiegebied);
+	container gridcel_100m := Templates/Grid_spoint(100[m], Studiegebied);
+	container gridcel_10m  := Templates/Grid_ipoint( 10[m], Studiegebied);
 
-	container Schemas
+	container Templates
 	{
 		template Grid_spoint
 		{
