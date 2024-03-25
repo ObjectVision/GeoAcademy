@@ -31,7 +31,7 @@ container Poly_2_grid_2_simplified_poly
 		attribute<ShapeDomain> ShapeDomain_rel (domain_grid) := poly2grid_untiled(Shape_geometry, domain_grid);
 		container SimplifiedPolygons                         := grid2poly_spoint(domain_grid, ShapeDomain, ShapeDomain_rel, simplifyFactor);
 	}
-	
+
 	template SimplifyPolygons_ipoint
 	{
 		// begin case parameters
@@ -45,7 +45,7 @@ container Poly_2_grid_2_simplified_poly
 		attribute<ShapeDomain> ShapeDomain_rel (domain_grid) := poly2grid_untiled(Shape_geometry, domain_grid);
 		container SimplifiedPolygons                         := grid2poly_ipoint(domain_grid, ShapeDomain, ShapeDomain_rel, simplifyFactor);
 	}
-  
+
 	container examples: IntegrityCheck = "(GeoDmsMajorVersionNumber() >= 14 && GeoDmsMinorVersionNumber() >= 14) || GeoDmsMajorVersionNumber() >= 15" 
 	{
 		container simplify_gridsize

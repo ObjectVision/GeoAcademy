@@ -392,9 +392,9 @@ template grid2poly_spoint
 		// check dat result geen overlappende polygonen bevat
 		unit<uint32> overlap_check := polygon_connectivity(igeometry)
 		{
-			attribute<ipoint> ioverlap(poly) := igeometry[F1] * igeometry[F2];
-			attribute<geography/point_rd> overlap(poly) := fpolygon(ioverlap);
-			attribute<int32> area := area(ioverlap, int32);
+			attribute<ipoint>             ioverlap (poly) := igeometry[F1] * igeometry[F2];
+			attribute<geography/point_rd> overlap  (poly) := fpolygon(ioverlap);
+			attribute<int32>              area            := area(ioverlap, int32);
 		}
 	}
 }

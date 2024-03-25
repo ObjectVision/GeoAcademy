@@ -6,7 +6,7 @@ container Geography: Using = "Units"
 		DialogData       = "ngr_layer" 
 	,	SpatialReference = "EPSG:28992";
 
-	unit<fpoint> point_rd    := range(point_rd_base, point_xy(0[m],300000[m]), point_xy(280000[m],625000[m]));
+	unit<fpoint> point_rd := range(point_rd_base, point_xy(0[m],300000[m]), point_xy(280000[m],625000[m]));
 
 	container Studiegebied
 	{
@@ -29,8 +29,8 @@ container Geography: Using = "Units"
 			container bbox;
 			// einde case parameters
 
-			parameter<int16> nr_cols:= int16((bbox/right - bbox/left)   / gridsize);
-			parameter<int16> nr_rows:= int16((bbox/top   - bbox/bottom) / gridsize);
+			parameter<int16> nr_cols := int16((bbox/right - bbox/left)   / gridsize);
+			parameter<int16> nr_rows := int16((bbox/top   - bbox/bottom) / gridsize);
 
 			unit<spoint> domain :=
 				range(
@@ -45,9 +45,9 @@ container Geography: Using = "Units"
 				)
 			,	DialogData = "point_rd"
 			{
-				parameter<m> size := gridsize;
-				attribute<.> id   := id(.);
-				attribute<uint8> test: = const(1b,.);
+				parameter<m>     size := gridsize;
+				attribute<.>     id   := id(.);
+				attribute<uint8> test := const(1b,.);
 			}
 		}
 		template Grid_ipoint
@@ -57,8 +57,8 @@ container Geography: Using = "Units"
 			container bbox;
 			// einde case parameters
 
-			parameter<int32> nr_cols:= int32((bbox/right - bbox/left)   / gridsize);
-			parameter<int32> nr_rows:= int32((bbox/top   - bbox/bottom) / gridsize);
+			parameter<int32> nr_cols := int32((bbox/right - bbox/left)   / gridsize);
+			parameter<int32> nr_rows := int32((bbox/top   - bbox/bottom) / gridsize);
 
 			unit<ipoint> domain :=
 				range(
@@ -73,10 +73,9 @@ container Geography: Using = "Units"
 				)
 			,	DialogData = "point_rd"
 			{
-				parameter<m> size := gridsize;
-				attribute<.> id   := id(.);
-				attribute<uint8> test: = const(1b,.);
-
+				parameter<m>     size := gridsize;
+				attribute<.>     id   := id(.);
+				attribute<uint8> test := const(1b,.);
 			}
 		}
 	}
