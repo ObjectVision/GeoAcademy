@@ -2,8 +2,10 @@ container data_sources_result
 {
 	container Geography
 	{
-		unit<fpoint> rdc_base : SpatialReference = "EPSG:28992";                // Rijksdriehoekstelsel, a 2D cartesian coordinate system for the netherlands
-		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f));  // Define a 2D range consisting of 2D cartesian coordinates, later used for the "province" domain unit geometry attribute
+		unit<fpoint> rdc_base : SpatialReference = "EPSG:28992"	,	DialogData = "wmts_layer";                // Rijksdriehoekstelsel, a 2D cartesian coordinate system for the netherlands
+		unit<fpoint> rdc      := range(rdc_base, point_xy(0f, 300000f), point_xy(280000f, 625000f));  // Define a 2D range consisting of 2D cartesian coordinates, later used for the "province" domain unit geometry attribute
+	
+		#include <../wmts_layer.dms>
 	}
 
 	container SourceData
@@ -50,9 +52,10 @@ container data_sources_result
 	container Export
 	{
 		unit<uint32> NS_stations := SourceData/NS_station
-		,	StorageName = "%LocalDataProjDir%/NS_stations_export.dbf" // The .dbf file to write to, which works in concert with a .shp file to specify attributes of each geometry
+		,	StorageName = "%LocalDataProjDir%/NS_stations_export.shp" 
+		, 	StorageType = "gdalwrite.vect"
 		{
-			attribute<Geography/rdc>    geometry   := SourceData/NS_station/geometry, StorageName = "%LocalDataProjDir%/NS_stations_export.shp"; // The shapefile to be created, a copy of the input shapefile's geometry
+			attribute<Geography/rdc>    geometry   := SourceData/NS_station/geometry;
 			attribute<string>           naam       := SourceData/NS_station/Webnaam;                                                                
 			attribute<SourceData/Corop> corop_rel  := point_in_polygon(SourceData/NS_station/geometry, SourceData/Corop/geometry), DisableStorage = "True"; // See https://www.geodms.nl/Point_in_polygon, relation for each NS Station towards what Corop geometry it lies in
 			attribute<string>           naam_corop := SourceData/Corop/statnaam[corop_rel]; // Add an attribute to the .dbf with for each NS station the corop region it is located in

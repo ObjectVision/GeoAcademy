@@ -87,7 +87,7 @@ container Buffers : Using = "Units;Geography"
 	
 	container arc
 	{
-		unit<uint32> segments   := arc2segm(SourceData/arcs_poly/arc);
+		unit<uint32> segments   := arc2segm(SourceData/arcs_poly/line);
 		unit<uint32> dyna_point := dyna_point(segments/point, segments/nextpoint, 50[m]);
 
 		container grid
@@ -104,11 +104,8 @@ container Buffers : Using = "Units;Geography"
 	{
 		container vector
 		{
-			attribute<ipoint>        ipoly                 (poly, SourceData/arcs_poly) := ipolygon(SourceData/arcs_poly/poly);
-			attribute<ipoint>        ipoly_inf_m100        (poly, SourceData/arcs_poly) := polygon_i8D(ipoly, 100d); // This is not advised for domains with many and complex polygons
-			attribute<geography/rdc> polygon_inflated_m100 (poly, SourceData/arcs_poly) := ipoly_inf_m100[geography/rdc];
-
-			attribute<geography/rdc> buffer_m100           (poly, SourceData/arcs_poly) := (ipoly_inf_m100 - ipoly)[geography/rdc];
+			attribute<geography/rdc> polygon_inflated_100m (poly, SourceData/arcs_poly) := bg_buffer_multi_polygon(SourceData/arcs_poly/polygon, 100d, 16b);
+			attribute<geography/rdc> buffer_100m           (poly, SourceData/arcs_poly) := bg_difference(polygon_inflated_100m,SourceData/arcs_poly/polygon);
 		}
 
 		container grid

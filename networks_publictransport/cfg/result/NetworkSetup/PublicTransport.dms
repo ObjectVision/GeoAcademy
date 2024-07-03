@@ -79,25 +79,7 @@ container PublicTransport : using = "Units;ModelParameters"
 				attribute<bool>   IsSub_to   := =ModelParameters/Arrival_or_Departure_at_time == 'Arrival' ? 'ToTime <= inTime' : 'ToTime   < (inTime + convert(ModelParameters/MaxOVTime, s_f)[Time] + convert(ModelParameters/MaxWalkingTime_Org2Stop , s_f)[Time])' ;
 				attribute<bool>   IsSub_dur  := duration <= convert(ModelParameters/MaxOVTime , s_f) * 2f;
 			}
-		
-			unit<uint32> StaticNet_subset := subset(StaticNet_subset_debug/IsSub_from && StaticNet_subset_debug/IsSub_to && StaticNet_subset_debug/IsSub_dur)
-			{
-				attribute<rdc>       geometry (arc) := Static_net/line[nr_OrgEntity];
-				attribute<Places>    FromPlace      := Static_net/FromPlace[nr_OrgEntity];
-				attribute<Places>    ToPlace        := Static_net/ToPlace[nr_OrgEntity];
-				attribute<rdc>       FromPoint      := Static_net/FromPoint[nr_OrgEntity];
-				attribute<rdc>       ToPoint        := Static_net/ToPoint[nr_OrgEntity];
-				attribute<string>    LabelText      := Static_net/LabelText[nr_OrgEntity];
-				attribute<Time>      FromTime       := Static_net/FromTime[nr_OrgEntity];
-				attribute<Time>      ToTime         := Static_net/ToTime[nr_OrgEntity];
-				attribute<s_f>       Duration       := Static_net/Duration[nr_OrgEntity];
-				attribute<LinkTypes> LinkType       := Static_net/LinkType[nr_OrgEntity];
-				attribute<NodeSet>   F1             := Static_net/F1[nr_OrgEntity];
-				attribute<NodeSet>   F2             := Static_net/F2[nr_OrgEntity];
-				attribute<uint32>    TripRef        := Static_net/TripRef[nr_OrgEntity];
-				attribute<string>    RouteName      := Static_net/RouteName[nr_OrgEntity];
-				attribute<Classifications/ModesList/List_selectie>    Mode        := Static_net/Mode[nr_OrgEntity];
-			}
+			unit<uint32> StaticNet_subset := select_with_attr_by_cond(SourceData/GTFS/StaticNets/Static_net, StaticNet_subset_debug/IsSub_from && StaticNet_subset_debug/IsSub_to && StaticNet_subset_debug/IsSub_dur);
 		
 			//// CREATE OD ////
 			unit<uint64> OD_traveltime_W_OV_W := 
@@ -311,7 +293,7 @@ container PublicTransport : using = "Units;ModelParameters"
 				{
 					unit<uint64> Complete_OrgDest := Combine_OrgDest
 					{
-						attribute<float32> ShortestTraveltime_min := rjoin(id(.), domain_UniqueOD/values, domain_UniqueOD/ShortestTraveltime);  //Convert the impedance from seconds to minutes, and store it as a string value. 60f
+						attribute<float32> ShortestTraveltime_min := rjoin(id(.), domain_UniqueOD/OD_nummer, domain_UniqueOD/ShortestTraveltime);  //Convert the impedance from seconds to minutes, and store it as a string value. 60f
 					}
 					
 					unit<uint32> Matrix_Array := org

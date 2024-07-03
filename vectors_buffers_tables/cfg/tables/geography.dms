@@ -1,22 +1,16 @@
 container Geography: using = "units"
 {
-	unit<fpoint> rdc_base
-	:	Format     = "EPSG:28992"
-	, 	DialogData = "ngr_layer"; // wms achtergrondlaag voor kaarten met rd coordinaten
-	unit<fpoint> rdc     := range(rdc_base, point(110000f,475000f), point(135000f,500000f));
-	unit<ipoint> rdc_mm  := gridset(rdc, point(0.001,0.001), point(0.0, 0.0), ipoint);
+	unit<fpoint> rdc_base :	Format     = "EPSG:28992", 	DialogData = "wmts_layer"; // wms achtergrondlaag voor kaarten met rd coordinaten
+	unit<fpoint> rdc     := range(rdc_base, point_xy(110000f,475000f), point_xy(135000f,500000f));
+	unit<ipoint> rdc_mm  := gridset(rdc, point_xy(0.001,0.001), point_xy(0.0, 0.0), ipoint);
 	
-	#include <ngr_layer.dms>
+	#include <wmts_layer.dms>
 
 	unit<uint32> sg_points := Subset(isDefined(NL_grid/domain/point_rd))
-	,	DialogData = "geometry"
-	,	DialogType = "map"
 	{
-		attribute<geography/rdc> 	geometry  := NL_grid/domain/point_rd[nr_OrgEntity];	
-		
+		attribute<geography/rdc>    geometry  := NL_grid/domain/point_rd[nr_OrgEntity];	
 		attribute<float32>          x         := PointCol(geometry);
 		attribute<float32>          y         := PointRow(geometry);
-		
 		attribute<NL_grid/domain>   NL_grid_domain_rel  := geometry[NL_grid/domain];	
 	}
 	
@@ -36,18 +30,18 @@ container Geography: using = "units"
 			range(
 				 gridset(
 					 rdc
-					,point(gridsize, -gridsize, geography/rdc)
-					,point(x_min, y_max, geography/rdc)
+					,point_xy(gridsize, -gridsize, geography/rdc)
+					,point_xy(x_min, y_max, geography/rdc)
 					,spoint
 				)
-				,point(0s, 0s)
-				,point(nr_cols, nr_rows)
+				,point_xy(0s, 0s)
+				,point_xy(nr_cols, nr_rows)
 			)
 		,	DialogData = "geography/rdc"
 		,	DialogType = "map"
 		{
 			attribute<.>               id            := id(.);
-			attribute<geography/rdc>   point_rd      := id[geography/rdc] + point(0.5f * gridsize, -0.5f * gridsize, geography/rdc);
+			attribute<geography/rdc>   point_rd      := id[geography/rdc] + point_xy(0.5f * gridsize, -0.5f * gridsize, geography/rdc);
 			attribute<uint32>          identificatie := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * 250);
 		}
 	}

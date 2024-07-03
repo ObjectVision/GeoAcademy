@@ -7,7 +7,7 @@ container Buffers:	Using = "units;classifications"
 		attribute<Float32> angle  := Float32(ID(.)) * 2f * float32(pi()) / Float32(64);
 		attribute<Float32> x      := cos(angle);
 		attribute<Float32> y      := sin(angle);
-		attribute<FPoint>  xy     := Point(cos(angle), sin(angle) )
+		attribute<FPoint>  xy     := point_xy(cos(angle), sin(angle))
 		{
 			parameter<int16> SymbolIndex := int16(169), DialogType = "SymbolIndex";
 		}
@@ -28,15 +28,14 @@ container Buffers:	Using = "units;classifications"
 	
 	Template Process_Radius
 	{
-		//
 		parameter<uint32> radius;
-		unit<uint32> entrance;
+		unit<uint32>      entrance;
 		//
 		
 		unit<uint32> points:= Combine(entrance, circle)
 		{
 			attribute<FPoint> xy   :=
-				Point(
+				point_xy(
 					  entrance/x[first_rel] + float32(radius) * Float32(circle/x[second_rel])
 					, entrance/y[first_rel] + float32(radius) * Float32(circle/y[second_rel])
 					, geography/rdc

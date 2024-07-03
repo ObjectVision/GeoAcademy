@@ -14,13 +14,11 @@
 container Geography: Using = "units"
 {
 	unit<float32> rdc_coord;
-	unit<fpoint>  rdc_base
-	:	Format     = "EPSG:28992"
-	,	DialogData = "ngr_layer"; // wms achtergrondlaag voor kaarten met rd coordinaten
-	unit<fpoint> rdc    := range(rdc_base, point(0f,300000f), point(280000f,625000f));
-	unit<ipoint> rdc_mm := gridset(rdc, point(0.001,0.001), point(0.0, 0.0), ipoint);
+	unit<fpoint>  rdc_base	: SpatialReference     = "EPSG:28992"	,	DialogData = "wmts_layer"; // wms achtergrondlaag voor kaarten met rd coordinaten
+	unit<fpoint> rdc    := range(rdc_base, point_xy(0f,300000f), point_xy(280000f,625000f));
+	unit<ipoint> rdc_mm := gridset(rdc, point_xy(0.001,0.001), point_xy(0.0, 0.0), ipoint);
 
-	#include <ngr_layer.dms>
+	#include <wmts_layer.dms>
 
 	container AMS_grid:  Using = "Units;geography"
 	{
@@ -33,7 +31,7 @@ container Geography: Using = "units"
 		container m10  := make_grid(10[m]);
 		container m2   := make_grid(2[m])
 		{
-			attribute<m100/domain> m100_rel (domain):= domain/id[m100/domain];
+			attribute<m100/domain> m100_rel (domain):= id(domain)[m100/domain];
 		}
 
 		template make_grid
@@ -49,23 +47,22 @@ container Geography: Using = "units"
 				range(
 					 gridset(
 						 rdc
-						,point(gridsize, -gridsize, geography/rdc)
-						,point(   x_min,     y_max, geography/rdc)
+						,point_xy(gridsize, -gridsize, geography/rdc)
+						,point_xy(   x_min,     y_max, geography/rdc)
 						,spoint
 					)
-					,point(0s, 0s)
-					,point(nr_cols, nr_rows)
+					,point_xy(0s, 0s)
+					,point_xy(nr_cols, nr_rows)
 				)
 			,	DialogData = "geography/rdc"
 			{
-				attribute<.>     id  := id(.);
-				attribute<int16> row := PointRow(id);
+				attribute<int16> row := PointRow(id(.));
 			}
 		}
 	}
-	unit<spoint> kernel := range(spoint, point(-5s, -5s), point(6s, 6s))
+	unit<spoint> kernel := range(spoint, point_xy(-5s, -5s), point_xy(6s, 6s))
 	{
-		attribute<uint32>  distMatr := dist2(point(0s, 0s, .), uint32);
+		attribute<uint32>  distMatr := dist2(point_xy(0s, 0s, .), uint32);
 		attribute<float32> m100     := distMatr <= 1  ? 1f : 0f;
 		attribute<float32> m500     := distMatr <= 25 ? 1f : 0f;
 	}

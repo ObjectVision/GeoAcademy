@@ -8,7 +8,7 @@ container basics_classify_and_visualise_exercise
 	container Geography
 	{
 		unit<fpoint> rdc_base : SpatialReference = "EPSG:28992", DialogData = "wmts_layer";
-		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f)), Descr = "rdc coordinates unit";
+		unit<fpoint> rdc      := range(rdc_base, point_xy(0f, 300000f), point_xy(280000f, 625000f)), Descr = "rdc coordinates unit";
 
 		#include<wmts_layer.dms> // For WMTS visualisation of background layer
 	}

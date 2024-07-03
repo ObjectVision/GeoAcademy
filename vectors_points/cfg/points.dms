@@ -69,7 +69,7 @@ container GeoDMS_Academy_Point
 		,	StorageReadOnly = "True"
 		{
 			attribute<rdc>              geometry;
-			attribute<.>                municipality_rel                := point_in_polygon(geometry, Municipalities/geometry);
+			attribute<Municipalities>   municipality_rel                := point_in_polygon(geometry, Municipalities/geometry);
 		}
 		
 		unit<uint32> Municipalities
@@ -83,53 +83,29 @@ container GeoDMS_Academy_Point
 		}
 	}
 	
-	container Analysis
+	container Analysis : using = "units;geography;SourceData"
 	{
 		container Euclidian_Distance_School_to_Metro
 		{
-			attribute<geography/rdc>                          Schools                 (SourceData/Primary_Schools_Amsterdam) := SourceData/Primary_Schools_Amsterdam/geometry;
-			attribute<geography/rdc>                          Stations                (SourceData/NZL_metrostations)         := SourceData/NZL_metrostations/geometry;
+			attribute<rdc>                          Schools                 (Primary_Schools_Amsterdam) := Primary_Schools_Amsterdam/geometry;
+			attribute<rdc>                          Stations                (NZL_metrostations)         := NZL_metrostations/geometry;
 			
 			//Make sure that the point sets do not have identical x/y combinations. If you do have duplicates, remove them first using the unique operator.
 			//This connect operator finds the closest metro station for each school.
-			attribute<SourceData/Primary_Schools_Amsterdam>   Schools_Stations_rel    (SourceData/Primary_Schools_Amsterdam) := connect(Stations, SourceData/Primary_Schools_Amsterdam/geometry);
+			attribute<NZL_metrostations>   Schools_Stations_rel    (Primary_Schools_Amsterdam) := connect(Stations, Primary_Schools_Amsterdam/geometry);
 			
-		unit<uint32> uq_points := unique(point)
-		{
-			attribute<float32>  x           := PointCol(values);
-			attribute<float32>  y           := PointRow(values);
-		}
-		
-		container DefineICstations 
-		{
-			unit<uint32>                IC_dom                  :=  SourceData/Infrastructuur/IC_Stations/uq;
-			attribute<rdc>              geometry  (IC_dom)      := IC_dom/Geometry;
-			attribute<float32>          x         (IC_dom)      := PointCol(geometry);
-			attribute<float32>          y         (IC_dom)      := PointRow(geometry);
-			
-			attribute<uint32>           point_rel (uq_points)       := connect(geometry, uq_points/values);
-
-			attribute<float32>          x_targetdomain (uq_points)  := PointCol(geometry)[point_rel];
-			attribute<float32>          y_targetdomain (uq_points)  := PointRow(geometry)[point_rel];
-			attribute<float32>          delta_x (uq_points)         := abs(x_targetdomain - uq_points/x)^2f;
-			attribute<float32>          delta_y (uq_points)         := abs(y_targetdomain - uq_points/y)^2f;
-
-			attribute<m>                dist (uq_points)            := sqrt(delta_x + delta_y)[m];
-		}
-			
-			
-			attribute<float32>            x_stations    (SourceData/Primary_Schools_Amsterdam)    := PointCol(Stations)[Schools_Stations_rel];
-			attribute<float32>            y_stations    (SourceData/Primary_Schools_Amsterdam)    := PointRow(Stations)[Schools_Stations_rel];
-			attribute<float32>            x_schools     (SourceData/Primary_Schools_Amsterdam)    := PointCol(Schools);
-			attribute<float32>            y_schools     (SourceData/Primary_Schools_Amsterdam)    := PointRow(Schools);
-			attribute<float32>            delta_x       (SourceData/Primary_Schools_Amsterdam)    := abs(x_stations - x_schools)^2f;
-			attribute<float32>            delta_y       (SourceData/Primary_Schools_Amsterdam)    := abs(y_stations - y_schools)^2f;
-			attribute<float32>            dist          (SourceData/Primary_Schools_Amsterdam)    := sqrt(delta_x + delta_y);
+			attribute<float32>            x_stations    (Primary_Schools_Amsterdam)    := PointCol(Stations)[Schools_Stations_rel];
+			attribute<float32>            y_stations    (Primary_Schools_Amsterdam)    := PointRow(Stations)[Schools_Stations_rel];
+			attribute<float32>            x_schools     (Primary_Schools_Amsterdam)    := PointCol(Schools);
+			attribute<float32>            y_schools     (Primary_Schools_Amsterdam)    := PointRow(Schools);
+			attribute<float32>            delta_x       (Primary_Schools_Amsterdam)    := abs(x_stations - x_schools)^2f;
+			attribute<float32>            delta_y       (Primary_Schools_Amsterdam)    := abs(y_stations - y_schools)^2f;
+			attribute<float32>            dist          (Primary_Schools_Amsterdam)    := sqrt(delta_x + delta_y);
 		}
 	
 		container Count_Schools_per_Municipality
 		{	
-			attribute<uint32>  count (SourceData/Municipalities) := count(SourceData/Primary_Schools_Amsterdam/geometry, SourceData/Primary_Schools_Amsterdam/municipality_rel);
+			attribute<uint32>  count (Municipalities) := count(Primary_Schools_Amsterdam/geometry, Primary_Schools_Amsterdam/municipality_rel);
 		}
 	}
 }

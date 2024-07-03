@@ -21,13 +21,13 @@ container SourceData: Using = "Units;Geography"
 		{
 			attribute<point_rd> point :=
 				point_xy(
-					 pointcol(shape/centre_point[nr_1]) + radius * float32(circle/template/x[nr_2])
-					,pointrow(shape/centre_point[nr_1]) + radius * float32(circle/template/y[nr_2])
+					 pointcol(shape/centre_point[first_rel]) + radius * float32(circle/template/x[second_rel])
+					,pointrow(shape/centre_point[first_rel]) + radius * float32(circle/template/y[second_rel])
 					,point_rd
 				);
-			attribute<uint32> ordinal := #pointset - nr_2 - 1;
+			attribute<uint32> ordinal := #pointset - second_rel - 1;
 		}
-		attribute<point_rd> geometry (poly, shape) := points2sequence(pointset/point, pointset/nr_1, pointset/ordinal);
+		attribute<point_rd> geometry (poly, shape) := points2sequence(pointset/point, pointset/first_rel, pointset/ordinal);
 	}
 
 	container Square

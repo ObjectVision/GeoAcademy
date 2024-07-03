@@ -1,8 +1,8 @@
 container Geography: Using = "Units"
 {
-	unit<fpoint>  rdc : Format   = "EPSG:28992", DialogData = "ngr_layer";
+	unit<fpoint>  rdc : SpatialReference   = "EPSG:28992", DialogData = "wmts_layer";
 
-	#include<ngr_layer.dms>
+	#include<wmts_layer.dms>
 	
 	parameter<m> x_min := 61182[m];
 	parameter<m> x_max := 62920[m];
@@ -12,9 +12,9 @@ container Geography: Using = "Units"
 	container grid_05m      := define_grid(0.5[m], 0.5[m], .);
 	container grid_10m      := define_grid(10[m] , 10[m] , .);
 
-	unit<spoint> kernel_buffer := range(spoint, point(-2s, -2s), point(3s,3s))
+	unit<spoint> kernel_buffer := range(spoint, point_xy(-2s, -2s), point_xy(3s,3s))
 	{
-		attribute<uint32>  dist     := dist2(point(0s, 0s, .), uint32);
+		attribute<uint32>  dist     := dist2(point_xy(0s, 0s, .), uint32);
 		attribute<float32> distMatr := dist <= 5 ? 1f : 0f;
 	}
 	
@@ -33,12 +33,12 @@ container Geography: Using = "Units"
 			range(
 				 gridset(
 					 rdc
-					,point(float32(gridsizeX), float32(-gridsizeY), rdc)
-					,point(src/x_min, src/y_max, rdc)
+					,point_xy(float32(gridsizeX), float32(-gridsizeY), rdc)
+					,point_xy(src/x_min, src/y_max, rdc)
 					,spoint
 				)
-				,point(0s, 0s)
-				,point(nr_cols,nr_rows)
+				,point_xy(0s, 0s)
+				,point_xy(nr_cols,nr_rows)
 			)
 		,	DialogData = "rdc";
 	}

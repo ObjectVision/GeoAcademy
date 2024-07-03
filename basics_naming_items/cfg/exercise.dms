@@ -23,7 +23,7 @@ container basics_naming_items_exercise
 	container Geography
 	{
 		unit<fpoint> rdc_base : SpatialReference = "EPSG:28992", DialogData = "ngr_layer";
-		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f));
+		unit<fpoint> rdc      := range(rdc_base, point_xy(0f, 300000f), point_xy(280000f, 625000f));
 
 		#include<wmts_layer.dms>
 	}

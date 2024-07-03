@@ -80,24 +80,7 @@ container PublicTransport : using = "Units;ModelParameters"
 				attribute<bool>   IsSub_dur  := duration <= convert(ModelParameters/MaxOVTime , s_f) * 2f;
 			}
 		
-			unit<uint32> StaticNet_subset := subset(StaticNet_subset_debug/IsSub_from && StaticNet_subset_debug/IsSub_to && StaticNet_subset_debug/IsSub_dur)
-			{
-				attribute<rdc>       geometry (arc) := Static_net/line[nr_OrgEntity];
-				attribute<Places>    FromPlace      := Static_net/FromPlace[nr_OrgEntity];
-				attribute<Places>    ToPlace        := Static_net/ToPlace[nr_OrgEntity];
-				attribute<rdc>       FromPoint      := Static_net/FromPoint[nr_OrgEntity];
-				attribute<rdc>       ToPoint        := Static_net/ToPoint[nr_OrgEntity];
-				attribute<string>    LabelText      := Static_net/LabelText[nr_OrgEntity];
-				attribute<Time>      FromTime       := Static_net/FromTime[nr_OrgEntity];
-				attribute<Time>      ToTime         := Static_net/ToTime[nr_OrgEntity];
-				attribute<s_f>       Duration       := Static_net/Duration[nr_OrgEntity];
-				attribute<LinkTypes> LinkType       := Static_net/LinkType[nr_OrgEntity];
-				attribute<NodeSet>   F1             := Static_net/F1[nr_OrgEntity];
-				attribute<NodeSet>   F2             := Static_net/F2[nr_OrgEntity];
-				attribute<uint32>    TripRef        := Static_net/TripRef[nr_OrgEntity];
-				attribute<string>    RouteName      := Static_net/RouteName[nr_OrgEntity];
-				attribute<Classifications/ModesList/List_selectie>    Mode        := Static_net/Mode[nr_OrgEntity];
-			}
+			unit<uint32> StaticNet_subset := select_with_attr_by_cond(SourceData/GTFS/StaticNets/Static_net, StaticNet_subset_debug/IsSub_from && StaticNet_subset_debug/IsSub_to && StaticNet_subset_debug/IsSub_dur);
 		
 			//// CREATE OD ////
 			unit<uint64> OD_traveltime_W_OV_W := 
@@ -120,13 +103,13 @@ container PublicTransport : using = "Units;ModelParameters"
 				attribute<float32>          decay_function               := traveltime_min == 0f ? 1f : 1f / (1f + exp(ov_a + ov_b*log(traveltime_min) + ov_c*traveltime_min));
 				attribute<float32>          values_decayed               := MakeDefined(values * decay_function,0f);
 				
-				unit<uint64> UniqueOD := subset(IsDefined(OD_nummer))
+				unit<uint64> UniqueOD := select_with_org_rel(IsDefined(OD_nummer))
 				{
-					attribute<float32>          Best_nr_items_of_interest_decayed   := ../values_decayed[nr_OrgEntity];
-					attribute<float32>          Best_nr_items_of_interest           := ../values[nr_OrgEntity];
-					attribute<float32>          ShortestTraveltime                  := ../traveltime_min[nr_OrgEntity];
-					attribute<string>           ModeUsed                            := ../ModeUsed[nr_OrgEntity];
-					attribute<Combine_OrgDest>  OD_nummer                           := ../OD_nummer[nr_OrgEntity];
+					attribute<float32>          Best_nr_items_of_interest_decayed   := ../values_decayed[org_rel];
+					attribute<float32>          Best_nr_items_of_interest           := ../values[org_rel];
+					attribute<float32>          ShortestTraveltime                  := ../traveltime_min[org_rel];
+					attribute<string>           ModeUsed                            := ../ModeUsed[org_rel];
+					attribute<Combine_OrgDest>  OD_nummer                           := ../OD_nummer[org_rel];
 					attribute<string>           OrgName                             := Combine_OrgDest/OrgName[od_nummer];
 					attribute<string>           DestName                            := Combine_OrgDest/DestName[od_nummer];
 				}
@@ -186,7 +169,7 @@ container PublicTransport : using = "Units;ModelParameters"
 				{
 					unit<uint64> Complete_OrgDest := Combine_OrgDest
 					{
-						attribute<float32> ShortestTraveltime_min := rjoin(id(.), domain_UniqueOD/values, domain_UniqueOD/ShortestTraveltime);  //Convert the impedance from seconds to minutes, and store it as a string value. 60f
+						attribute<float32> ShortestTraveltime_min := rjoin(id(.), domain_UniqueOD/OD_nummer, domain_UniqueOD/ShortestTraveltime);  //Convert the impedance from seconds to minutes, and store it as a string value. 60f
 					}
 					
 					unit<uint32> Matrix_Array := org

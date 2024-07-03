@@ -187,7 +187,7 @@ container Results : Using = "Units;SourceData;Geography;Classifications"
 				container Land: Descr = "These attributes are used to describe the freeLand for allocation"
 				{
 					attribute<Ha> TotalLand          (NL_grid/domain) := const(1.0, NL_grid/domain, Ha);
-					attribute<Ha> TotalExogenousLand (NL_grid/domain) := ='add_list('+asItemList('ExogenousLand/' + LandUse_Exogeneous/Name)+')';
+					attribute<Ha> TotalExogenousLand (NL_grid/domain) := ='add('+asItemList('ExogenousLand/' + LandUse_Exogeneous/Name)+')';
 					attribute<Ha> UsedLand           (NL_grid/domain) := min_elem(TotalLand, TotalExogenousLand);
 					attribute<Ha> ExogenousOverflow  (NL_grid/domain) := TotalExogenousLand - UsedLand;
 					attribute<Ha> FreeLand           (NL_grid/domain) := TotalLand - UsedLand, Descr = "Lc = TotalLand - exogenousLand: free allocatable land";
@@ -240,7 +240,7 @@ container Results : Using = "Units;SourceData;Geography;Classifications"
 			{
 				container ClaimSummary : Descr    = "These parameters indicate of the sum of claims fits the sum of availaible freeLand; which is a neccesary (but not sufficient) condition"
 				{
-					parameter<claimHa> sumClaims     := ='add_list('+asItemList('sum(CaseData/TotalPeriodClaims/'+LandUse_Endogeneous/Name+')')+')';
+					parameter<claimHa> sumClaims     := ='add('+asItemList('sum(CaseData/TotalPeriodClaims/'+LandUse_Endogeneous/Name+')')+')';
 					parameter<claimHa> totalLand     := sum(CaseData/Land/TotalLand);
 					parameter<claimHa> usedLand      := sum(CaseData/Land/UsedLand );
 					parameter<claimHa> freeLand      := sum(CaseData/Land/FreeLand);
@@ -257,7 +257,7 @@ container Results : Using = "Units;SourceData;Geography;Classifications"
 						, Ha
 					)
 				{
-					attribute<Ha> Total(NL_grid/domain):= ='add_list('+asItemList(LandUse_Endogeneous/Name)+')';
+					attribute<Ha> Total(NL_grid/domain):= ='add('+asItemList(LandUse_Endogeneous/Name)+')';
 				}
 
 				container Exogenous := 
@@ -268,7 +268,7 @@ container Results : Using = "Units;SourceData;Geography;Classifications"
 						, Ha
 					)
 				{
-					attribute<Ha> Total(NL_grid/domain):= ='add_list('+asItemList(LandUse_Exogeneous/Name)+')';
+					attribute<Ha> Total(NL_grid/domain):= ='add('+asItemList(LandUse_Exogeneous/Name)+')';
 				}
 
 				attribute <Classifications/LandUse> Predominant (NL_grid/domain) := 
@@ -367,7 +367,7 @@ container Results : Using = "Units;SourceData;Geography;Classifications"
 						, float32
 					), Descr = "Tcj = Aj * exp(beta*Scj): new demands based on given Aj (currValue)";
 
-			attribute<DemandUnit> total_demand (ADomain) := ='add_list('+asItemList('adjusted_demands/'+LandUse_Endogeneous/Name)+')', Descr = "Tc = sum(j, Tcj): total demand on input"; // for unused land category, add "+'value(1.0, DemandUnit)'"
+			attribute<DemandUnit> total_demand (ADomain) := ='add('+asItemList('adjusted_demands/'+LandUse_Endogeneous/Name)+')', Descr = "Tc = sum(j, Tcj): total demand on input"; // for unused land category, add "+'value(1.0, DemandUnit)'"
 
 			attribute<BcUnit>     demand_factor (ADomain) := CaseData/Land/FreeLand[ADomain/nr_orgEntity] / total_demand, Descr = "Bc = Lc / Tc: see formula 6a";
 
@@ -377,8 +377,8 @@ container Results : Using = "Units;SourceData;Geography;Classifications"
 					, '_IterAllocatedLand('+String(ID(LandUse_Endogeneous))+ '[uint8], Adomain)' 
 				);
 
-			parameter<claimHa>    TotalDeviation  := ='sqrt(add_list('+asItemList('sum(allocated_land/'+LandUse_Endogeneous/Name+'/SqrDev)')+'))', Descr = "Sum of distances between claimed and allocated sums of ha per region";
-			parameter<claimHa>    AllocatedAggr   := ='add_list('+asItemList('allocated_land/'+LandUse_Endogeneous/Name+'/nrHaAggr')+')';
+			parameter<claimHa>    TotalDeviation  := ='sqrt(add('+asItemList('sum(allocated_land/'+LandUse_Endogeneous/Name+'/SqrDev)')+'))', Descr = "Sum of distances between claimed and allocated sums of ha per region";
+			parameter<claimHa>    AllocatedAggr   := ='add('+asItemList('allocated_land/'+LandUse_Endogeneous/Name+'/nrHaAggr')+')';
 			parameter<Bool>       stop            := TotalDeviation < 12000[Ha], Descr = "Stop iteration if the average deviation of the claims is less than 10 square km";
 
 			container nextValue :=

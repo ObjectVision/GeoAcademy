@@ -1,10 +1,8 @@
 container Results : Using = "Units;SourceData;Geography"
 {
-	unit<uint32> Building_height := subset(IsDefined(SourceData/BAG/pand_plus/identificatie))
-	,	DialogType = "Map"
-	,	DialogData = "geometry"
+	unit<uint32> Building_height := select_with_org_rel(IsDefined(SourceData/BAG/pand_plus/identificatie))
 	{
-		attribute<rdc>   geometry (polygon)         := SourceData/BAG/pand_plus/geometry[nr_OrgEntity];
+		attribute<rdc>        geometry (polygon)         := SourceData/BAG/pand_plus/geometry[org_rel];
 		attribute<cm_uint16>  height_building            := Determine_heights/height/building;
 		attribute<cm_uint16>  height_ridge               := Determine_heights/height/ridge;
 		attribute<cm_uint16>  height_ground              := Determine_heights/height/impl/offset_ground;
@@ -39,23 +37,21 @@ container Results : Using = "Units;SourceData;Geography"
 				attribute<Building_height>    building_with_buffer (grid_05m/domain) := (proximity - 1f)[Building_height];
 				attribute<Building_height>    buffer               (grid_05m/domain) := isDefined(building_grid_rel) ? (0 / 0)[Building_height] : building_with_buffer;
 
-				unit<uint32> buffer_points := Subset(isDefined(buffer) && isDefined(AHN/AHN3_Hulst_int))
+				unit<uint32> buffer_points := select_with_org_rel(isDefined(buffer) && isDefined(AHN/AHN3_Hulst_int))
 				,	DialogType = "Map"
 				,	DialogData = "point"
 				{
-					attribute<rdc>         point             := nr_OrgEntity[rdc];
-					attribute<Building_height>  building_grid_rel := buffer[nr_OrgEntity];
-					attribute<cm_uint16>        ground_offset     := AHN/AHN3_Hulst_int[nr_OrgEntity];
+					attribute<rdc>              point             := org_rel[rdc];
+					attribute<Building_height>  building_grid_rel := buffer[org_rel];
+					attribute<cm_uint16>        ground_offset     := AHN/AHN3_Hulst_int[org_rel];
 				}
 			}
 		}
 	}
 
-	unit<uint32> Distance := subset(IsDefined(SourceData/BAG/pand_plus/identificatie))
-	,	DialogType = "Map"
-	,	DialogData = "geometry"
+	unit<uint32> Distance := select_with_org_rel(IsDefined(SourceData/BAG/pand_plus/identificatie))
 	{
-		attribute<rdc>         geometry                          := SourceData/BAG/pand_plus/centroid[nr_OrgEntity];
+		attribute<rdc>              geometry                          := SourceData/BAG/pand_plus/centroid[org_rel];
 		attribute<grid_10m/domain>  grid_rel                          := geometry[grid_10m/domain];
 		attribute<m>                DistTo          (grid_10m/domain) := GridDist(resistance_grid, grid_rel, const(0, ., m));
 		

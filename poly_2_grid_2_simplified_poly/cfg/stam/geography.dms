@@ -1,10 +1,8 @@
 container Geography: Using = "Units"
 {
-	#include<ngr_layer.dms>
+	#include<wmts_layer.dms>
 
-	unit<fpoint>  point_rd_base:
-		DialogData       = "ngr_layer" 
-	,	SpatialReference = "EPSG:28992";
+	unit<fpoint>  point_rd_base : DialogData = "wmts_layer" , SpatialReference = "EPSG:28992";
 
 	unit<fpoint> point_rd := range(point_rd_base, point_xy(0[m],300000[m]), point_xy(280000[m],625000[m]));
 

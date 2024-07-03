@@ -15,12 +15,12 @@ container GeoDMS_Academy_Polygon_Processing
 			attribute<float64> angle := float64(id(.)) * 2d * float64(pi()) / 64d;
 			attribute<float64> x     := cos(angle);
 			attribute<float64> y     := sin(angle);
-			attribute<float64> xy    := point(cos(angle), sin(angle));
+			attribute<float64> xy    := point_xy(cos(angle), sin(angle));
 		}
 
 		unit<uint32> shape: nrofrows = 1
 		{
-			attribute<rdc_meter> centre_point := const(point(156000f, 461000f, rdc_meter),.);
+			attribute<rdc_meter> centre_point := const(point_xy(156000f, 461000f, rdc_meter),.);
 		}
 
 		parameter<m> radius   := 500[m];
@@ -28,7 +28,7 @@ container GeoDMS_Academy_Polygon_Processing
 		unit<uint32> pointset := combine(shape, template)
 		{
 			attribute<rdc_meter> point :=
-				point(
+				point_xy(
 					 pointcol(shape/centre_point[first_rel]) + radius * float32(circle/template/x[second_rel])
 					,pointrow(shape/centre_point[first_rel]) + radius * float32(circle/template/y[second_rel])
 					,rdc_meter
@@ -42,10 +42,10 @@ container GeoDMS_Academy_Polygon_Processing
 	{
 		unit<uint32> shape: nrofrows = 1
 		{
-			attribute<rdc_meter> left_top     := const(point(157500f, 461500f, rdc_meter),.);
-			attribute<rdc_meter> right_top    := const(point(158500f, 461500f, rdc_meter),.);
-			attribute<rdc_meter> right_bottom := const(point(158500f, 460500f, rdc_meter),.);
-			attribute<rdc_meter> left_bottom  := const(point(157500f, 460500f, rdc_meter),.);
+			attribute<rdc_meter> left_top     := const(point_xy(157500f, 461500f, rdc_meter),.);
+			attribute<rdc_meter> right_top    := const(point_xy(158500f, 461500f, rdc_meter),.);
+			attribute<rdc_meter> right_bottom := const(point_xy(158500f, 460500f, rdc_meter),.);
+			attribute<rdc_meter> left_bottom  := const(point_xy(157500f, 460500f, rdc_meter),.);
 		}
 
 		unit<uint32> pointset : nrofrows = 5
@@ -60,8 +60,6 @@ container GeoDMS_Academy_Polygon_Processing
 		container sub
 		{
 			unit<uint32> all : nrofrows = 4
-			,	DialogType = "Map"
-			,	DialogData = "geometry"
 			{
 				attribute<rdc_meter>  geometry (poly) := union_data(., lefttop/geometry, righttop/geometry, rightbottom/geometry, leftbottom/geometry);
 				attribute<NorthSouth> NorthSouth_rel  := union_data(., 0, 0, 1, 1);
@@ -72,10 +70,10 @@ container GeoDMS_Academy_Polygon_Processing
 				attribute<string> label : ['north','south'];
 			}
 
-			container lefttop     := make_square(point(-250f, 250f, rdc_meter));
-			container righttop    := make_square(point(500f,  250f, rdc_meter));
-			container rightbottom := make_square(point(500f, -500f, rdc_meter));
-			container leftbottom  := make_square(point(-250f, -500f, rdc_meter));
+			container lefttop     := make_square(point_xy(-250f, 250f, rdc_meter));
+			container righttop    := make_square(point_xy(500f,  250f, rdc_meter));
+			container rightbottom := make_square(point_xy(500f, -500f, rdc_meter));
+			container leftbottom  := make_square(point_xy(-250f, -500f, rdc_meter));
 
 			template make_square
 			{
@@ -83,14 +81,14 @@ container GeoDMS_Academy_Polygon_Processing
 				parameter<rdc_meter> delta;
 				// end case parameter
 	
-				unit<uint32> shape: nrofrows = 1
+				unit<uint32> shape := square/shape
 				{
 					parameter<m>         size := 750[m];
 
 					attribute<rdc_meter> left_top     := square/shape/left_top + delta;
-					attribute<rdc_meter> right_top    := left_top + point(size,  0[m], rdc_meter);
-					attribute<rdc_meter> right_bottom := left_top + point(size, -size, rdc_meter);
-					attribute<rdc_meter> left_bottom  := left_top + point(0[m], -size, rdc_meter);
+					attribute<rdc_meter> right_top    := left_top + point_xy(size,  0[m], rdc_meter);
+					attribute<rdc_meter> right_bottom := left_top + point_xy(size, -size, rdc_meter);
+					attribute<rdc_meter> left_bottom  := left_top + point_xy(0[m], -size, rdc_meter);
 				}
 
 				unit<uint32> pointset : nrofrows = 5
@@ -109,9 +107,9 @@ container GeoDMS_Academy_Polygon_Processing
 	{
 		unit<uint32> shape: nrofrows = 1
 		{
-			attribute<rdc_meter> top          := const(point(158000f, 459500f, rdc_meter),.);
-			attribute<rdc_meter> right_bottom := const(point(158500f, 458500f, rdc_meter),.);
-			attribute<rdc_meter> left_bottom  := const(point(157500f, 458500f, rdc_meter),.);
+			attribute<rdc_meter> top          := const(point_xy(158000f, 459500f, rdc_meter),.);
+			attribute<rdc_meter> right_bottom := const(point_xy(158500f, 458500f, rdc_meter),.);
+			attribute<rdc_meter> left_bottom  := const(point_xy(157500f, 458500f, rdc_meter),.);
 		}
 
 		unit<uint32> pointset : nrofrows = 4
@@ -241,7 +239,7 @@ container GeoDMS_Academy_Polygon_Processing
 			attribute<m> X_check := settings/Xc * R + settings/Xr * C;
 			attribute<m> Y_check := settings/Yc * R + settings/Yr * C + settings/Y_org;
 
-			attribute<fpoint> point_reproject := point(settings/precisie_factor * R, settings/precisie_factor * C, fpoint); // factor 100 ivm ipolygon vertalen en afrondingen
+			attribute<fpoint> point_reproject := point_xy(settings/precisie_factor * R, settings/precisie_factor * C, fpoint); // factor 100 ivm ipolygon vertalen en afrondingen
 		}
 		attribute<Geography/rdc_meter> geometry_org (shape, poly) := points2sequence(pointset/point, pointset/sequencenr, pointset/ordinal);
 
@@ -264,7 +262,7 @@ container GeoDMS_Academy_Polygon_Processing
 				attribute<m> X := settings/Xc * R + settings/Xr * C;
 				attribute<m> Y := settings/Yc * R + settings/Yr * C + settings/Y_org;
 
-				attribute<geography/rdc_meter> point_rdc := point(X, Y, geography/rdc_meter);
+				attribute<geography/rdc_meter> point_rdc := point_xy(X, Y, geography/rdc_meter);
 			}
 
 			attribute<geography/rdc_meter> stretched_i100m_kernel_16 (shape, poly) := points2sequence(pointset/point_rdc, pointset/sequencenr, pointset/ordinal)
