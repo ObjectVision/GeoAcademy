@@ -25,46 +25,37 @@ container StudyAreaFeeds
 		attribute<upoint>    unique_id    := point_xy(cumu_in_grid, Grid1D, upoint);
 		attribute<uint32>    nTransfers   := StopsGrid/nTransfers[GridId];
 		
-		unit<spoint> StopsGrid := MakeStopsGrid/StopsGrid
+		unit<spoint> StopsGrid := ='geometries/NL_grid/domain_'+string(ModelParameters/MaxTransferDistKm)+'m'
 		{
 			attribute<uint32> nStops     := pcount(GridId);
-			attribute<uint32> nTransfers := nTop + nRight + nBottom + nLeft + (nStops - 1);
+			attribute<uint32> nTransfers := nTop + nRight + nBottom + nLeft + (sub_or_null(nStops,1));
 			attribute<uint32> nTop       := potential(float32(nStops), float32(Templates/Neighbourhood/Top))[uint32];
 			attribute<uint32> nRight     := potential(float32(nStops), float32(Templates/Neighbourhood/Right))[uint32];
 			attribute<uint32> nBottom    := potential(float32(nStops), float32(Templates/Neighbourhood/Bottom))[uint32];
 			attribute<uint32> nLeft      := potential(float32(nStops), float32(Templates/Neighbourhood/Left))[uint32];
 			attribute<uint32> uniId      := cumulate(const(1,.,uint32))-1;
 		}
-		
-		container MakeStopsGrid 
-		{
-			parameter<geometries/rdc> bottomleft := point_xy(min(pointCol(point)), min(PointRow(point)), geometries/rdc);
-			parameter<geometries/rdc>	upperright := point_xy(max(pointCol(point)), max(PointRow(point)), geometries/rdc);
-			parameter<geometries/rdc>	resolution := point_xy((ModelParameters/MaxTransferDistKm) * 0.5f, (ModelParameters/MaxTransferDistKm) * 0.5f, geometries/rdc);
-			parameter<spoint>   size       := spoint((upperright - bottomleft) / resolution) + point_xy(1s, 1s, spoint);
-		
-			unit<spoint> StopsGrid := range(gridset(geometries/rdc, resolution, bottomleft, wpoint), point_xy(0s, 0s), size)
-			{
-			}
-		}
 	}
-	
 	unit<uint32> Links := LoadFeeds/ScheduledLinks
 	, DialogData = "Line"
 	, DialogType = "map" 
-	, FreeData = "false"
-	, StoreData = "true"
 	{
-		attribute<geometries/rdc>	Line (arc):			 = LoadFeeds/ScheduledLinks/Line;
-		attribute<uint32>	feedId:				 = const(0, LoadFeeds/ScheduledLinks, uint32);
-		attribute<uint32> 	OrgfromStop:		 = LoadFeeds/ScheduledLinks/fromStop;
-		attribute<uint32>	OrgtoStop:			 = LoadFeeds/ScheduledLinks/toStop;
-		attribute<Time> 	depTime: 			 = LoadFeeds/ScheduledLinks/depTime;
-		attribute<Time> 	arrTime: 			 = LoadFeeds/ScheduledLinks/arrTime;
-		attribute<ModesList/List> 	Mode:				 = LoadFeeds/ScheduledLinks/Mode;
-		attribute<Stops>	FromStop:			 = rlookup(uni_fStopId, Stops/uni_StopId);
-		attribute<Stops>	ToStop:				 = rlookup(uni_tStopId, Stops/uni_StopId);
-		attribute<upoint>	uni_fStopId:		 = point_xy(feedId, OrgfromStop, upoint);
-		attribute<upoint>	uni_tStopId:		 = point_xy(feedId, OrgtoStop, upoint);	
+		attribute<rdc>                     Line (arc)       := LoadFeeds/ScheduledLinks/Line;
+		attribute<uint32>                  feedId           := const(0, LoadFeeds/ScheduledLinks, uint32);
+		attribute<uint32>                  OrgfromStop      := LoadFeeds/ScheduledLinks/fromStop;
+		attribute<uint32>                  OrgtoStop        := LoadFeeds/ScheduledLinks/toStop;
+		attribute<Time>                    depTime          := LoadFeeds/ScheduledLinks/depTime;
+		attribute<Time>                    arrTime          := LoadFeeds/ScheduledLinks/arrTime;
+		attribute<ModesList/List_selectie> Mode             := LoadFeeds/ScheduledLinks/Mode;
+		attribute<Stops>                   FromStop         := rlookup(uni_fStopId, Stops/uni_StopId);
+		attribute<Stops>                   ToStop           := rlookup(uni_tStopId, Stops/uni_StopId);
+		attribute<upoint>                  uni_fStopId      := point_xy(feedId, OrgfromStop, upoint);
+		attribute<upoint>                  uni_tStopId      := point_xy(feedId, OrgtoStop, upoint);
+		// attribute<AvailableModes>          avMode_id        := rlookup(Mode_rel, AvailableModes/Values);
+		// attribute<uint32>                  Trips_rel          := LoadFeeds/ScheduledLinks/Trips_rel;
+		// attribute<Agencies>                Agency_rel       := LoadFeeds/ScheduledLinks/Agency_rel;
+
+		// attribute<string>                  RouteName        := LoadFeeds/ScheduledLinks/RouteName;
+		// attribute<string>                  RouteName_short  := LoadFeeds/ScheduledLinks/RouteName_short;
 	}
 }

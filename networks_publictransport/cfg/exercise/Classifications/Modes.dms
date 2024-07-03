@@ -1,6 +1,6 @@
 Container ModesList 
 { 
-	unit<uint32> List: NrOfRows = 85 
+	unit<uint32> List: NrOfRows = 86 
 	{
 		// combines official modes list, as defined in the GTFS format, with the extended mode list, as eg used in the Vilnius feed. 
 		// For more information on the extended mode list see https://developers.google.com/transit/gtfs/reference/extended-route-types
@@ -12,7 +12,7 @@ Container ModesList
 		attribute<uint8>  b            := Matrix/Values[value(id(.)* nrAttr + 4, Matrix)][uint8];
 		attribute<uint8>  IsGelijkvloers := Matrix/Values[value(id(.)* nrAttr + 5, Matrix)][uint8];
 		attribute<string> LabelText    := Name, DialogType = "LabelText";
-		attribute<uint32> SymbolColor  := rgb(r, g, b), DialogType = "SymbolColor";
+		// attribute<uint32> SymbolColor  := rgb(r, g, b), DialogType = "SymbolColor";
 		attribute<uint32> BrushColor   := rgb(r, g, b), DialogType = "BrushColor";
 		
 		container V := for_each_nedv(replace(name,';','','ú','u',' ','_','-','_','?','','/',''), String(ID(.))+'[..]', void, .);
@@ -27,10 +27,12 @@ Container ModesList
 			'2',	'Rail',  '222', '220', '  0','0',
 			'3',	'Bus',   '100', '100', '100','1',
 			'4',	'Ferry', '  0', '  0', '180','0',
-			'5',	'Walking', '', '', '','1',
+			'5',	'Walking', '254', '150', '0','1',
 			'6',	'CableTram', '', '', '','0',
 			'7',	'AerialLift', '', '', '','0',
 			'8',	'Funicular', '', '', '','0',
+			'9',	'Waiting', '120', '50', '225','0',
+			
 			'100',	'Railway_Service', '', '', '','0',
 			'101',	'High_Speed_Rail_Service', '', '', '','0',
 			'102',	'Long_Distance_Trains', '', '', '','0',
@@ -110,10 +112,14 @@ Container ModesList
 		}
 	}
 	
-	unit<uint32> List_selectie := subset(id(List) <= 4)
+	unit<uint32> List_selectie := subset(id(List) <= 5 || id(List) == 9)
 	{
-		attribute<string> name         := List/Name[nr_OrgEntity], DialogType = "LabelText";
-		attribute<uint32> SymbolColor  := List/SymbolColor[nr_OrgEntity], DialogType = "SymbolColor";
+		attribute<string> name         := List/Name[nr_OrgEntity];
+		attribute<string> Label         := name, DialogType = "LabelText";
+		// attribute<uint32> SymbolColor  := List/SymbolColor[nr_OrgEntity], DialogType = "SymbolColor";
+		attribute<uint32> PenColor  := List/BrushColor[nr_OrgEntity], DialogType = "PenColor";
+		attribute<uint32> ModeNr       := List/ModeNr[nr_OrgEntity];
+		attribute<uint8> IsGelijkvloers  := List/IsGelijkvloers[nr_OrgEntity];
+		container V := for_each_nedv(replace(name,';','','ú','u',' ','_','-','_','?','','/',''), String(ID(.))+'[..]', void, .);
 	}
-
 }

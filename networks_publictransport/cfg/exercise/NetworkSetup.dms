@@ -1,183 +1,56 @@
 container NetworkSetup : using = "units;SourceData;Classifications"
 {  
-	container Parameters 
-	{
-		parameter<bool>     RegioIndelingen_Ontkoppeld   := TRUE;
-		
-		parameter<string>   FileDate                     := '20191007';
-		parameter<string>   Date                         := '20191008';
-
-		parameter<string>   Orgset                       := 'PC4sub';    //'PC6_domain_corop'; //'PC6full' 'PC6sub' 'PC4full' 'PC4sub' PC6sub_MRA PC6sub_Pijp Point100m LocatiesMachiel Buurtsub_MRA  //org punten selectie
-		parameter<string>   Destset                      := 'Inhabitants';      // 'Jobs', 'Inhabitants' dest point selectie
-
-		parameter<string>   Arrival_or_Departure_at_time := 'Departure'; // 'Arrival'  'Departure'
-	
-		parameter<float32>  MaxTransferDistKm            := 500f;        //500f 1000f max euclidean distance (m)
-		parameter<float32>  MaxODconn                    := 25f;
-		parameter<float32>  MaxLoopDistSelectie          := 1800f;       // is 30 min
-		parameter<float32>  MaxFietsDistSelectie         := 1800f;       // is 30 min
-		parameter<Time>     OngelijkvloersPenalty        := 120[Time];
-
-		parameter<s_f>      MaxBikeDuration              := 1800[s_f];   // is 30 min
-		parameter<s_f>      MaxWalkDuration              := 900[s_f];    // is 15 min
-		parameter<s_f>      MaxOVDuration                := 7200[s_f];   // is 2 hours
-		
-		//distance decay parameters, calculated and provided by PBL
-		parameter<float32> car_a   := -8.65786f;
-		parameter<float32> car_b   := 2.492099f;
-		parameter<float32> car_c   := 0.011641f;
-		parameter<float32> bike_a  := -7.95686f;
-		parameter<float32> bike_b  := 2.675059f;
-		parameter<float32> bike_c  := 0.011981f;
-		parameter<float32> ov_a    := -12.3301f;
-		parameter<float32> ov_b    := 2.907621f;
-		parameter<float32> ov_c    := 0.012824f;
-		
-		container Advanced
-		{
-			parameter<string>   PrevDate                := string(uint32(date) - 1);
-			parameter<string>   Date_prefix             := substr(Date, 0, 4) + '/' + substr(Date, 4, 2) + '/' +  substr(Date, 6, 2);
-			parameter<Weekdays> Today                   := 1[Weekdays];
-			parameter<Weekdays> Yesterday               := Weekdays/PrevRef[Today];
-			parameter<string>   StudyArea               := 'NL'; //'NL' 'Amsterdam'                             //studyarea tbv trip selecties
-			parameter<string>   NetwerkExtent           := 'Nederland'; //'Amsterdam' 'Nederland'               //netwerk schaal
-			parameter<string>   Dest_location_scale     := '5000m'; //'500m' '1000m' '5000m'   100m                  //dest punten schaal
-			parameter<m_s>      WalkingSpeed            := Classifications/OSM/netwerk_type/maxspeed[Classifications/OSM/netwerk_type/V/Pedestrian] / 3600[s_f / hr_f] * 1000[m / km];
-			parameter<m_s>      BikingSpeed             := Classifications/OSM/netwerk_type/maxspeed[Classifications/OSM/netwerk_type/V/Bike] / 3600[s_f / hr_f] * 1000[m / km];
-			parameter<m_s>      TransferEffectiveSpeed  := 0.93[m_s]; // 4/1.2= 3.33 km/h --> 0.93 m/s  // expressed in kilometers per hour, modified for manhattan distances
-			parameter<string>   SamplingStrategy        := 'T'; //'H'; // or 'S', or 'R' T=test= 17:00:00 
-			parameter<string>   DestSet_string          := Destset + '_' + Dest_location_scale;
-			parameter<uint32>   ProvSubset_id              := SourceData/RegioIndelingen/Provincies/V/Utrecht;
-		
-			unit<uint32> SampleDay := subset(Time/Day = 0)
-			{
-				attribute<Hours>   Hour            := rlookup(Time/Hour[Nr_OrgEntity], Hours/Hour);
-				attribute<uint32>  Minute          := Time/Minute[Nr_OrgEntity];
-				attribute<uint32>  Second          := Time/Second[Nr_OrgEntity];
-				
-				attribute<bool>    T_sample        := =Analyse_tijdstip_1 +'||'+ Analyse_tijdstip_2 +'||'+ Analyse_tijdstip_3 +'||'+ Analyse_tijdstip_4 +'||'+ Analyse_tijdstip_5 +'||'+ Analyse_tijdstip_6 +'||'+ Analyse_tijdstip_7 +'||'+ Analyse_tijdstip_8; // +'||'+ Analyse_tijdstip_9;
-				
-				attribute<string>  LabelText       := Time/LabelText[Nr_OrgEntity], DialogType = "LabelText";
-				attribute<string>  TemplatableText := Time/TemplatableText[Nr_OrgEntity];
-				
-				parameter<string>   Analyse_tijdstip_1  := 'hour == 7[hours] && minute == 0 && second == 0';
-				parameter<string>   Analyse_tijdstip_2  := 'hour == 7[hours] && minute == 3 && second == 0';
-				parameter<string>   Analyse_tijdstip_3  := 'hour == 7[hours] && minute == 7 && second == 0';
-				parameter<string>   Analyse_tijdstip_4  := 'hour == 7[hours] && minute == 16 && second == 0';
-				parameter<string>   Analyse_tijdstip_5  := 'hour == 12[hours] && minute == 0 && second == 0';
-				parameter<string>   Analyse_tijdstip_6  := 'hour == 12[hours] && minute == 3 && second == 0';
-				parameter<string>   Analyse_tijdstip_7  := 'hour == 12[hours] && minute == 7 && second == 0';
-				parameter<string>   Analyse_tijdstip_8  := 'hour == 12[hours] && minute == 16 && second == 0';
-				
-				unit<uint32> Hours: NrOfRows = 24 
-				{
-					attribute<uint32> Hour:				expr = "id(.)";
-					attribute<string> LabelText:		expr = "string(Hour) + 'h'", DialogType = "LabelText";
-				}
-			}
-			
-			unit<uint32> MeasureMoments := ='subset(SampleDay/'+SamplingStrategy+'_sample)'
-			{
-				attribute<Time>    Moment := SampleDay/Nr_OrgEntity[Nr_OrgEntity];
-				attribute<string>  Name   := Time/TemplatableText[Moment];
-			}
-			
-			container Combines
-			{
-				unit<uint32> Dijkstra_attributes : nrofrows = 3
-				{
-					attribute<string>    name : ['Impedance','OrgZone_rel','DstZone_rel'];
-				}
-				unit<uint32> MomentXattributes := combine(MeasureMoments,Dijkstra_attributes)
-				{
-					attribute<string> MomentName       := MeasureMoments/name[first_rel];
-					attribute<string> DijkstraAttrName := Dijkstra_attributes/name[second_rel];
-					attribute<string> name             := MomentName + '_' + DijkstraAttrName;
-				}
-			}
-			
-			unit<uint32> TransitionType_list : nrofrows = 4
-			{
-				attribute<string> Type     : ['Org2Stop'     ,'Org2Stop'     ,'Stop2Dest'    ,'Stop2Dest'];
-				attribute<string> Mode     : ['Walk'         ,'Bike'         ,'Walk'         ,'Bike'];
-				attribute<string> FromTime : ['FromTime_Walk','FromTime_Bike','FromTime_Walk','FromTime_Bike'];
-				attribute<string> ToTime   : ['ToTime_Walk'  ,'ToTime_Bike'  ,'ToTime_Walk'  ,'ToTime_Bike'];
-				attribute<string> OrgDest  : ['Org'          ,'Org'          ,'Dest'         ,'Dest'];
-				attribute<string> TypeMode := Type + Mode;
-				attribute<Time>   ModeMax  := const(MaxWalkDuration[uint32],.);
-			}
-		}
-	}
-
 	container Configuration
 	{
-		unit<uint32>         PC4full   := SourceData/RegioIndelingen/PC4_punten;
-		unit<uint32>         PC4sub    := SourceData/RegioIndelingen/PC4_punten/sub;
+		unit<uint32>         PC4   := SourceData/RegioIndelingen/PC4_punten/sub;
 		
-		unit<uint32> org := =Parameters/Orgset
+		unit<uint32> org := =ModelParameters/Orgset
 		, DialogData = "point"
 		, DialogType = "map" 
 		{
-			attribute<rdc>                   point          := =Parameters/Orgset+'/point';
-			attribute<string>                name           := =Parameters/Orgset+'/name', DialogType = "LabelText";
-			// attribute<float32>               nr_inwoners    := =Parameters/Orgset+'/nr_inwoners[float32]', DialogType = "LabelText";
+			attribute<rdc>                   point          := =ModelParameters/Orgset+'/point';
+			attribute<string>                name           := =ModelParameters/Orgset+'/name', DialogType = "LabelText";
 		}
 		
-		unit<uint32> dest := ='SourceData/'+Parameters/Destset+'/HasValues' 
+		unit<uint32> dest := ='SourceData/'+ModelParameters/Destset+'/HasValues' 
 		, DialogData = "point"
 		, DialogType = "map" 
 		{
-			attribute<uint32>                nr_values      := ='SourceData/'+Parameters/Destset+'/HasValues/nr_values';
-			attribute<rdc>                   point          := ='SourceData/'+Parameters/Destset+'/HasValues/point';
-			attribute<string>                name           := ='SourceData/'+Parameters/Destset+'/HasValues/id_name', DialogType = "LabelText";
+			attribute<uint32>                nr_values      := ='SourceData/'+ModelParameters/Destset+'/HasValues/nr_values';
+			attribute<rdc>                   point          := ='SourceData/'+ModelParameters/Destset+'/HasValues/point';
+			attribute<string>                name           := ='SourceData/'+ModelParameters/Destset+'/HasValues/id_name', DialogType = "LabelText";
 		}
 		
 		unit<uint32> stops := SourceData/GTFS/StudyAreaFeeds/Stops;
 		
-		container RoadNets_Org2Dest   := templates/createNetwork_Org2Dest(Org, Dest);
-		container RoadNets_Org2Stop   := templates/createNetwork_Org2Stop(Org, SourceData/GTFS/StudyAreaFeeds/Stops);
-		container RoadNets_Stop2Dest  := templates/createNetwork_Stop2Dest(SourceData/GTFS/StudyAreaFeeds/Stops, Dest);
-
+		container RoadNets_Org2Dest_W   := templates/createNetwork(Org  , Dest    , SourceData/OSM/Result, 'Walking', 'Org2Dest');
+		container RoadNets_Org2Stop_W   := templates/createNetwork(Org  , Stops   , SourceData/OSM/Result, 'Walking', 'Org2Stop');
+		container RoadNets_Stop2Dest_W  := templates/createNetwork(Stops, Dest    , SourceData/OSM/Result, 'Walking', 'Stop2Dest');
+		container RoadNets_Org2Dest_B   := templates/createNetwork(Org  , Dest    , SourceData/OSM/Result, 'Biking',  'Org2Dest');
+		container RoadNets_Org2Stop_B   := templates/createNetwork(Org  , Stops   , SourceData/OSM/Result, 'Biking',  'Org2Stop');
+		container RoadNets_Stop2Dest_B  := templates/createNetwork(Stops, Dest    , SourceData/OSM/Result, 'Biking',  'Stop2Dest');
+		
 		container CreateODconnections : using = "/SourceData/GTFS/StaticNets"
 		{
-			container Sparse_uitwerking_Org2Stop
+			container Sparse_uitwerking_Org2Stop_W
 			{
-				unit<uint32> OD_path := RoadNets_Org2Stop/Network/ODMatrix;
-				
-				attribute<OD_Path>                  OD_index (OD_Path)                    := index(OD_path/stopRef); 
-				attribute<ScheduledSpaceTimeEvents> time_index (ScheduledSpaceTimeEvents) := index(ScheduledSpaceTimeEvents/stopRef);
-				
-				attribute<UInt32> Count_paths_to_stop  (stops) := pcount(OD_path/stopRef);
-				attribute<UInt32> Count_times_per_stop (stops) := pcount(ScheduledSpaceTimeEvents/StopRef);
-				
-				attribute<UInt32> nr_PathsBefore       (stops) := cumulate(Count_paths_to_stop) - Count_paths_to_stop;			
-				attribute<UInt32> nr_TimesBefore       (stops) := cumulate(Count_times_per_stop) - Count_times_per_stop;
-				
-				attribute<UInt32> nr_Joins             (stops) := Count_paths_to_stop * Count_times_per_stop;
-				attribute<UInt32> nr_JoinsBefore       (stops) := cumulate(nr_Joins) - nr_Joins;
-				
-				unit<uint32> AB := range(UInt32, 0, sum(nr_Joins))
+				unit<uint32> OD_path := RoadNets_Org2Stop_W/Network/ODMatrix;
+				unit<uint32> AB := join_equal_values_uint32(OD_path/EindRef, ScheduledSpaceTimeEvents/stopRef)
 				{
-					attribute<UInt32>                     Stop_Ord          := id(.) - nr_JoinsBefore[Stop_rel];
+					attribute<Stops>                      Stop_rel          := X_rel;
+					attribute<OD_path>                    OD_rel            := first_rel;
+					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := second_rel;
 					
-					attribute<Org>                        Org_rel           := OD_path/OrgRef[OD_rel];
-					attribute<Stops>                      Stop_rel          := classify(id(.), nr_JoinsBefore);
 					attribute<allLinks/Places>            Place_rel         := stops/PlaceRef[Stop_rel];
-					attribute<OD_path>                    OD_rel            := OD_index[value(stop_ord / Count_times_per_stop[Stop_rel] + nr_PathsBefore[Stop_rel], OD_path)];
-					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := time_index[value(stop_ord % Count_times_per_stop[Stop_rel] + nr_TimesBefore[Stop_rel], ScheduledSpaceTimeEvents)];
-					attribute<geometries/rdc>                   Line (arc)        := OD_path/Line[OD_rel];
+					attribute<Org>                        Org_rel           := OD_path/StartRef[OD_rel];
+					attribute<rdc>    		              geometry (arc)    := OD_path/geometry[OD_rel];
 					
 					attribute<Time>                       Duration_Walk     := OD_path/Duration[OD_rel];
-					attribute<Time>                       Duration_Bike     := (Distance / ModelParameters/Advanced/BikingSpeed)[Time];
 					attribute<m>                          Distance          := OD_path/Distance[OD_rel];
 					attribute<Time>                       FromTime_Walk     := toTime_Walk[int32] - Duration_Walk[int32] > 0i
 																				? toTime_Walk - Duration_Walk 
 																				: (toTime_Walk[int32] - Duration_Walk[int32] + (#Time / 2)[int32])[uint32];
-					attribute<Time>                       FromTime_Bike     := toTime_Bike[int32] - Duration_Bike[int32] > 0i
-																				? toTime_Bike - Duration_Bike 
-																				: (toTime_Bike[int32] - Duration_Bike[int32] + (#Time / 2)[int32])[uint32];
 					attribute<Time>                       toTime_Walk       := ScheduledSpaceTimeEvents/TimeRef[SSTE_rel];
-					attribute<Time>                       toTime_Bike       := ScheduledSpaceTimeEvents/TimeRef[SSTE_rel];
 					attribute<string>                     LabelText         := OD_path/labeltext[OD_rel], DialogType = "LabelText";
 					
 					attribute<upoint>                     MomentxPlace      := point_xy(toTime_Walk, Place_rel, upoint);
@@ -190,49 +63,92 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 				}
 			}
 			
-			container Sparse_uitwerking_Stop2Dest : using = "/SourceData/GTFS/StaticNets"
+			container Sparse_uitwerking_Org2Stop_B
 			{
-				unit<uint32> OD_path := RoadNets_Stop2Dest/Network/ODMatrix;
-				
-				attribute<OD_Path>                  OD_index (OD_Path)                    := index(OD_path/stopRef); 
-				attribute<ScheduledSpaceTimeEvents> time_index (ScheduledSpaceTimeEvents) := index(ScheduledSpaceTimeEvents/stopRef);
-				
-				attribute<UInt32> Count_paths_from_stop  (stops) := pcount(OD_path/stopRef);
-				attribute<UInt32> Count_times_per_stop (stops) := pcount(ScheduledSpaceTimeEvents/StopRef);
-				
-				attribute<UInt32> nr_PathsBefore       (stops) := cumulate(Count_paths_from_stop) - Count_paths_from_stop;			
-				attribute<UInt32> nr_TimesBefore       (stops) := cumulate(Count_times_per_stop) - Count_times_per_stop;
-				
-				attribute<UInt32> nr_Joins             (stops) := Count_paths_from_stop * Count_times_per_stop;
-				attribute<UInt32> nr_JoinsBefore       (stops) := cumulate(nr_Joins) - nr_Joins;
-				
-				unit<uint32> AB := range(UInt32, 0, sum(nr_Joins))
+				unit<uint32> OD_path := RoadNets_Org2Stop_B/Network/ODMatrix;
+				unit<uint32> AB := join_equal_values_uint32(OD_path/EindRef, ScheduledSpaceTimeEvents/stopRef)
 				{
-					attribute<UInt32>                     Stop_Ord          := id(.) - nr_JoinsBefore[Stop_rel];
+					attribute<Stops>                      Stop_rel          := X_rel;
+					attribute<OD_path>                    OD_rel            := first_rel;
+					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := second_rel;
 					
-					attribute<Dest>                       Dest_rel          := OD_path/DestRef[OD_rel];
-					attribute<Stops>                      Stop_rel          := classify(id(.), nr_JoinsBefore);
 					attribute<allLinks/Places>            Place_rel         := stops/PlaceRef[Stop_rel];
-					attribute<OD_path>                    OD_rel            := OD_index[value(stop_ord / Count_times_per_stop[Stop_rel] + nr_PathsBefore[Stop_rel], OD_path)];
-					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := time_index[value(stop_ord % Count_times_per_stop[Stop_rel] + nr_TimesBefore[Stop_rel], ScheduledSpaceTimeEvents)];
-					attribute<geometries/rdc>                   Line (arc)        := OD_path/Line[OD_rel];
+					attribute<Org>                        Org_rel           := OD_path/StartRef[OD_rel];
+					attribute<rdc>    		              geometry (arc)        := OD_path/geometry[OD_rel];
+					
+					attribute<Time>                       Duration_Bike     := (Distance / ModelParameters/Advanced/BikingSpeed)[Time];
+					attribute<m>                          Distance          := OD_path/Distance[OD_rel];
+					attribute<Time>                       FromTime_Bike     := toTime_Bike[int32] - Duration_Bike[int32] > 0i
+																				? toTime_Bike - Duration_Bike 
+																				: (toTime_Bike[int32] - Duration_Bike[int32] + (#Time / 2)[int32])[uint32];
+					attribute<Time>                       toTime_Bike       := ScheduledSpaceTimeEvents/TimeRef[SSTE_rel];
+					attribute<string>                     LabelText         := OD_path/labeltext[OD_rel], DialogType = "LabelText";
+					
+					attribute<upoint>                     MomentxPlace      := point_xy(toTime_Bike, Place_rel, upoint);
+					attribute<allLinks/NodeSet>           NodeRef           := rlookup(MomentxPlace, allLinks/NodeSet/values);
+					
+					unit<uint32> uq_stops := unique(Place_rel)
+					{
+						attribute<allLinks/Places> UsedStops := values;
+					}
+				}
+			}
+			
+			container Sparse_uitwerking_Stop2Dest_W
+			{
+				unit<uint32> OD_path := RoadNets_Stop2Dest_W/Network/ODMatrix;
+				unit<uint32> AB := join_equal_values_uint32(OD_path/StartRef, ScheduledSpaceTimeEvents/stopRef)
+				{
+					attribute<Stops>                      Stop_rel          := X_rel;
+					attribute<OD_path>                    OD_rel            := first_rel;
+					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := second_rel;
+					
+					attribute<allLinks/Places>            Place_rel         := stops/PlaceRef[Stop_rel];
+					attribute<Dest>                       Dest_rel          := OD_path/EindRef[OD_rel];
+					attribute<rdc>    		              geometry (arc)    := OD_path/geometry[OD_rel];
 					
 					attribute<Time>                       Duration_Walk     := OD_path/Duration[OD_rel] > #Time / 2
 																				? #Time / 2
 																				: OD_path/Duration[OD_rel];
-					attribute<Time>                       Duration_Bike     := (Distance / ModelParameters/Advanced/BikingSpeed)[Time];
 					attribute<m>                          Distance          := OD_path/Distance[OD_rel];
 					attribute<Time>                       FromTime_Walk     := ScheduledSpaceTimeEvents/TimeRef[SSTE_rel];
-					attribute<Time>                       FromTime_Bike     := ScheduledSpaceTimeEvents/TimeRef[SSTE_rel];
 					attribute<Time>                       ToTime_Walk       := FromTime_Walk + Duration_Walk > #Time
 																				? FromTime_Walk + Duration_Walk - #Time
 																				: FromTime_Walk + Duration_Walk;
+					attribute<string>                     LabelText         := OD_path/labeltext[OD_rel], DialogType = "LabelText";
+					
+					attribute<upoint>                     MomentxPlace      := point_xy(FromTime_Walk, Place_rel, upoint);
+					attribute<allLinks/NodeSet>           NodeRef           := rlookup(MomentxPlace, allLinks/NodeSet/values);
+					
+					unit<uint32> uq_stops := unique(Place_rel)
+					{
+						attribute<allLinks/Places> UsedStops := values;
+					}
+				}
+			}
+			
+			container Sparse_uitwerking_Stop2Dest_B
+			{
+				unit<uint32> OD_path := RoadNets_Stop2Dest_B/Network/ODMatrix;
+				unit<uint32> AB := join_equal_values_uint32(OD_path/StartRef, ScheduledSpaceTimeEvents/stopRef)
+				{
+					attribute<Stops>                      Stop_rel          := X_rel;
+					attribute<OD_path>                    OD_rel            := first_rel;
+					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := second_rel;
+					
+					attribute<allLinks/Places>            Place_rel         := stops/PlaceRef[Stop_rel];
+					attribute<Dest>                       Dest_rel          := OD_path/EindRef[OD_rel];
+					attribute<rdc>    		              geometry (arc)    := OD_path/geometry[OD_rel];
+					
+					attribute<Time>                       Duration_Bike     := (Distance / ModelParameters/Advanced/BikingSpeed)[Time];
+					attribute<m>                          Distance          := OD_path/Distance[OD_rel];
+					attribute<Time>                       FromTime_Bike     := ScheduledSpaceTimeEvents/TimeRef[SSTE_rel];
 					attribute<Time>                       ToTime_Bike       := FromTime_Bike + Duration_Bike > #Time
 																				? FromTime_Bike + Duration_Bike - #Time
 																				: FromTime_Bike + Duration_Bike;
 					attribute<string>                     LabelText         := OD_path/labeltext[OD_rel], DialogType = "LabelText";
 					
-					attribute<upoint>                     MomentxPlace      := point_xy(FromTime_Walk, Place_rel, upoint);
+					attribute<upoint>                     MomentxPlace      := point_xy(FromTime_Bike, Place_rel, upoint);
 					attribute<allLinks/NodeSet>           NodeRef           := rlookup(MomentxPlace, allLinks/NodeSet/values);
 					
 					unit<uint32> uq_stops := unique(Place_rel)

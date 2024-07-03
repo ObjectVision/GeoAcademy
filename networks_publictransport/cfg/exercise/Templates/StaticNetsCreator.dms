@@ -1,9 +1,9 @@
-Template StaticNetsCreator
-{    
+Template StaticNetsCreator : using = "geometries"
+{
 	unit<uint32> inStops;
 	unit<uint32> inLinks;
 	
-	unit<uint32> Stops := inStops, FreeData = "false"
+	unit<uint32> Stops := inStops
 	{
 		attribute<Time>       FirstEvent            :  = min(ScheduledSpaceTimeEvents/TimeRef, ScheduledSpaceTimeEvents/StopRef);
 		attribute<Time>       LastEvent             :  = max(ScheduledSpaceTimeEvents/TimeRef, ScheduledSpaceTimeEvents/StopRef);
@@ -12,14 +12,15 @@ Template StaticNetsCreator
 	}
 		
 	unit<uint32> AllPlaces       := allLinks/Places;
+	unit<uint32> AllTimes        := allLinks/UniqueTimeEvents;
 	
 	unit<uint32> ScheduledLinks  := inLinks 
 	{
 		attribute<ScheduledSpaceTimeEvents> from_sst   := rlookup(point_xy(depTime, fromStop, upoint), ScheduledSpaceTimeEvents/Values);
 		attribute<ScheduledSpaceTimeEvents> to_sst     := rlookup(point_xy(arrTime, toStop, upoint), ScheduledSpaceTimeEvents/Values);
-		attribute<Time>                     Duration   := depTime <= arrTime 
-															? arrTime - depTime 
-															: (arrTime + #Time) - depTime;
+		attribute<s_f>                      Duration   := depTime <= arrTime 
+															? float32(arrTime - depTime)[s_f]
+															: float32((arrTime + #Time) - depTime)[s_f];
 		attribute<string>                   LabelText  := 'Scheduled: ' + Time/LabelText[depTime] + ' @ ' + Stops/Name[fromStop] + ' to ' + Time/LabelText[arrTime] + ' @ ' + Stops/Name[toStop], DialogType = "LabelText";
 		
 		unit<uint32> findUniqueSpaceTimeEvents := union_unit(ScheduledLinks, ScheduledLinks)
@@ -28,6 +29,8 @@ Template StaticNetsCreator
 			attribute<Time>   TimeRef      := pointCol(timesOfStop);
 		}
 	}
+	
+	unit<uint32> ScheduledTimeEvents      := unique(ScheduledLinks/findUniqueSpaceTimeEvents/TimeRef);
 	
 	unit<uint32> ScheduledSpaceTimeEvents := unique(ScheduledLinks/findUniqueSpaceTimeEvents/TimesOfStop) 
 	{
@@ -49,7 +52,7 @@ Template StaticNetsCreator
 		, DialogData = "point"
 		, DialogType = "map" 
 		{
-			attribute<geometries/rdc>  point          := inStops/point[Nr_OrgEntity];
+			attribute<rdc>  point          := inStops/point[Nr_OrgEntity];
 			attribute<uint32>    nTransfers     := inStops/nTransfers[Nr_OrgEntity];
 			attribute<string>    LabelText      := inStops/LabelText[Nr_OrgEntity], DialogType = "LabelText";
 			attribute<StopsGrid> GridId         := inStops/GridId[Nr_OrgEntity];
@@ -58,7 +61,7 @@ Template StaticNetsCreator
 			attribute<upoint>    unique_id      := inStops/unique_id[Nr_OrgEntity];
 			attribute<uint32>    first_transfer := cumulate(nTransfers) - nTransfers;
 			attribute<uint32>    nEvents        := pcount(ScheduledSpaceTimeEvents/StopRef)[Nr_OrgEntity];
-			attribute<ModesList/List> Mode      := inStops/mode[nr_OrgEntity];
+			attribute<ModesList/List_selectie> Mode      := inStops/mode[nr_OrgEntity];
 		}
 		
 		unit<spoint> StopsGrid := inStops/StopsGrid;
@@ -74,21 +77,20 @@ Template StaticNetsCreator
 		unit<uint32> TransferPaths := range(uint32, 0, sum(TransferFromStops/nTransfers))
 		, DialogData = "Line"
 		, DialogType = "map" 
-		, FreeData = "false"
 		{
 			attribute<TransferFromStops>  first_from_stop    := rlookup(id(.), TransferFromStops/first_transfer);
 			attribute<TransferFromStops>  from_trans_StopRef := cumulate(uint32(IsDefined(first_from_stop))) - 1;
 			attribute<inStops>            from_StopRef       := TransferFromStops/Nr_OrgEntity[from_trans_StopRef];
-			attribute<ModesList/List>     from_Mode          := TransferFromStops/Mode[from_trans_StopRef];
-			attribute<ModesList/List>     to_Mode            := inStops/Mode[to_StopRef];
+			attribute<ModesList/List_selectie>     from_Mode          := TransferFromStops/Mode[from_trans_StopRef];
+			attribute<ModesList/List_selectie>     to_Mode            := inStops/Mode[to_StopRef];
 			
-			attribute<bool>               NeedsTranferTimePenalty := ModesList/List/IsGelijkvloers[from_Mode] == 1b && ModesList/List/IsGelijkvloers[to_Mode] == 1b //van: bus, tram, walk    to bus, tram, walk  --> niks
+			attribute<bool>               NeedsTranferTimePenalty := ModesList/List_selectie/IsGelijkvloers[from_Mode] == 1b && ModesList/List_selectie/IsGelijkvloers[to_Mode] == 1b //van: bus, tram, walk    to bus, tram, walk  --> niks
 																		? False
-																		: ModesList/List/IsGelijkvloers[from_Mode] == 1b && ModesList/List/IsGelijkvloers[to_Mode] == 0b //van: bus, tram, walk to metro, rail, ferry --> penalty
+																		: ModesList/List_selectie/IsGelijkvloers[from_Mode] == 1b && ModesList/List_selectie/IsGelijkvloers[to_Mode] == 0b //van: bus, tram, walk to metro, rail, ferry --> penalty
 																			? TRUE
-																			: ModesList/List/IsGelijkvloers[from_Mode] == 0b && ModesList/List/IsGelijkvloers[to_Mode] == 0b //van: metro, rail, ferry to metro, rail, ferry --> penalty
+																			: ModesList/List_selectie/IsGelijkvloers[from_Mode] == 0b && ModesList/List_selectie/IsGelijkvloers[to_Mode] == 0b //van: metro, rail, ferry to metro, rail, ferry --> penalty
 																				? TRUE
-																				: ModesList/List/IsGelijkvloers[from_Mode] == 0b && ModesList/List/IsGelijkvloers[to_Mode] == 1b //van: metro, rail, ferry to bus, tram, walk --> penalty
+																				: ModesList/List_selectie/IsGelijkvloers[from_Mode] == 0b && ModesList/List_selectie/IsGelijkvloers[to_Mode] == 1b //van: metro, rail, ferry to bus, tram, walk --> penalty
 																					? TRUE
 																					: (0/0)[bool];
 
@@ -108,24 +110,24 @@ Template StaticNetsCreator
 																	,case(nLeft > 0 	&& nLeft   > (id(.) - (first_trans + nBottom + nRight + nTop)), uint32(3)) 
 																	,4
 																)[Directions];
-			attribute<StopsGrid>		  to_GridId:			expr = "(spoint(from_GridId)+Directions/point[quad])[StopsGrid]";
-			attribute<uint32>			  to_Grid1d:			expr = "StopsGrid/uniId[to_GridId]";
-			attribute<upoint>			  to_unique_id := point_xy(seq2, to_Grid1d, upoint);
-			attribute<inStops>			  to_StopRef:			expr = "rlookup(to_unique_id, inStops/unique_id)";
+			attribute<StopsGrid>          to_GridId     := (spoint(from_GridId)+Directions/point[quad])[StopsGrid];
+			attribute<uint32>             to_Grid1d     := StopsGrid/uniId[to_GridId];
+			attribute<upoint>             to_unique_id  := point_xy(seq2, to_Grid1d, upoint);
+			attribute<inStops>            to_StopRef    := rlookup(to_unique_id, inStops/unique_id);
 				
-			attribute<uint32>			  seq1:					expr = "id(.) - switch(case(quad = 0, first_trans), case(quad = 1, first_trans + nTop), case(quad = 2, first_trans + nTop + nRight), case(quad = 3, first_trans + nTop + nRight + nBottom), first_trans + nTop + nRight + nBottom + nLeft)";
-			attribute<uint32>			  seq2:					expr = "quad = 4 && seq1 >= inStops/cumu_in_grid[from_StopRef] ? seq1 + 1 : seq1";
+			attribute<uint32>             seq1          := id(.) - switch(case(quad = 0, first_trans), case(quad = 1, first_trans + nTop), case(quad = 2, first_trans + nTop + nRight), case(quad = 3, first_trans + nTop + nRight + nBottom), first_trans + nTop + nRight + nBottom + nLeft);
+			attribute<uint32>             seq2          := quad = 4 && seq1 >= inStops/cumu_in_grid[from_StopRef] ? seq1 + 1 : seq1;
 			
-			attribute<string>			  LabelText:			expr = "'Transfer from ' + inStops/LabelText[from_StopRef] + ' to ' + inStops/LabelText[to_StopRef]";
-			attribute<geometries/rdc>			  Line (arc):			expr = "points2sequence(GenLines/Points,GenLines/Seq,GenLines/Ord)";
-			attribute<float32>			  Distance := arc_length(Line, float32);
-			attribute<Time>				  minTransferTime := RoundUp(Distance / ModelParameters/Advanced/TransferEffectiveSpeed)[Time];
+			attribute<string>             LabelText        := 'Transfer from ' + inStops/LabelText[from_StopRef] + ' to ' + inStops/LabelText[to_StopRef];
+			attribute<rdc>                Line (arc)       := points2sequence(GenLines/Points,GenLines/Seq,GenLines/Ord);
+			attribute<m>                  Distance         := arc_length(Line, m);
+			attribute<s_f>                minTransferTime  := Distance / ModelParameters/Advanced/TransferEffectiveSpeed;
 			
-			unit<uint32> GenLines: 		expr = "union_unit(TransferPaths, TransferPaths)" 
+			unit<uint32> GenLines:= union_unit(TransferPaths, TransferPaths)
 			{
-				attribute<geometries/rdc> 		Points: expr = "union_data(., inStops/point[from_StopRef], inStops/point[to_StopRef])";
-				attribute<TransferPaths> 	Seq:	expr = "union_data(., id(TransferPaths), id(TransferPaths))";
-				attribute<uint32> 			Ord:	expr = "union_data(., const(0,TransferPaths,uint32), const(1,TransferPaths,uint32))";
+				attribute<rdc>              Points := union_data(., inStops/point[from_StopRef], inStops/point[to_StopRef]);
+				attribute<TransferPaths>    Seq    := union_data(., id(TransferPaths), id(TransferPaths));
+				attribute<uint32>           Ord    := union_data(., const(0,TransferPaths,uint32), const(1,TransferPaths,uint32));
 			}
 		}
 		unit<uint32> TransfersByStart := range(uint32, 0, sum(TransferPaths/nEvents))
@@ -134,15 +136,15 @@ Template StaticNetsCreator
 		{
 			attribute<TransferPaths>            first_trans_path  := rlookup(id(.), TransferPaths/first_trans_event);
 			attribute<TransferPaths>            PathRef           := cumulate(uint32(IsDefined(first_trans_path))) - 1;
-			attribute<geometries/rdc>                 Line (arc)        := TransferPaths/Line[PathRef];
+			attribute<rdc>                      Line (arc)        := TransferPaths/Line[PathRef];
 			attribute<Stops>                    fromStop          := TransferPaths/from_StopRef[PathRef];
 			attribute<Stops>                    toStop            := TransferPaths/to_StopRef[PathRef];
 			attribute<bool>                     NeedsTranferTimePenalty := TransferPaths/NeedsTranferTimePenalty[PathRef];
 			attribute<uint32>                   cumu_events       := cumulate(const(1,.,uint32), PathRef) - 1;
 			attribute<ScheduledSpaceTimeEvents> SSTE_Ref          := rlookup(point_xy(cumu_events, fromStop, upoint), ScheduledSpaceTimeEvents/unique_id);
 			attribute<Time>                     fromTime          := ScheduledSpaceTimeEvents/TimeRef[SSTE_Ref];
-			attribute<Time>                     Duration          := TransferPaths/minTransferTime[PathRef] + ModelParameters/OngelijkvloersPenalty;
-			attribute<Time>                     toTime            := fromTime + Duration < #Time ? fromTime + Duration : fromTime + Duration -  #Time;
+			attribute<s_f>                      Duration          := NeedsTranferTimePenalty ? TransferPaths/minTransferTime[PathRef] + convert(ModelParameters/OngelijkvloersPenalty, s_f) : TransferPaths/minTransferTime[PathRef];
+			attribute<Time>                     toTime            := fromTime + Duration[Time] < #Time ? fromTime + Duration[Time] : fromTime + Duration[Time] -  #Time;
 			attribute<string>                   LabelText         := 'Transfer: ' + Time/LabelText[fromTime] + ' @ ' + Stops/Name[fromStop] + ' to ' + Time/LabelText[toTime] + ' @ ' + Stops/Name[toStop], DialogType = "LabelText";
 		}
 	}
@@ -150,29 +152,35 @@ Template StaticNetsCreator
 	unit<uint32> allLinks := union_unit(ScheduledLinks, CreateTransfersSet/TransfersByStart)
 	, DialogData = "Line", DialogType = "map" 
 	{
-		attribute<geometries/rdc>       Line (arc) := union_data(., ScheduledLinks/Line, CreateTransfersSet/TransfersByStart/Line); 
+		attribute<rdc>            Line (arc) := union_data(., ScheduledLinks/Line, CreateTransfersSet/TransfersByStart/Line); 
 		attribute<Time>           fromTime   := union_data(., ScheduledLinks/depTime, CreateTransfersSet/TransfersByStart/fromTime); 
 		attribute<Time>           toTime     := union_data(., ScheduledLinks/arrTime, CreateTransfersSet/TransfersByStart/toTime); 
-		attribute<uint32>         Duration   := union_data(., ScheduledLinks/Duration, CreateTransfersSet/TransfersByStart/Duration); 
+		attribute<s_f>            Duration   := union_data(., ScheduledLinks/Duration, CreateTransfersSet/TransfersByStart/Duration); 
 		attribute<string>         LabelText  := union_data(., ScheduledLinks/LabelText, CreateTransfersSet/TransfersByStart/LabelText), DialogType = "LabelText";
-		attribute<ModesList/List> Mode       := union_data(., ScheduledLinks/Mode, const(ModesList/List/V/Walking, CreateTransfersSet/TransfersByStart, ModesList/List));
+		attribute<uint32>         TripRef    := union_data(., ScheduledLinks/TripRef, const(0/0,CreateTransfersSet/TransfersByStart));
+		attribute<string>         RouteName    := union_data(., ScheduledLinks/RouteName, const('Walking',CreateTransfersSet/TransfersByStart));
+		attribute<ModesList/List_selectie> Mode       := union_data(., ScheduledLinks/Mode, const(ModesList/List_selectie/V/Walking, CreateTransfersSet/TransfersByStart, ModesList/List_selectie));
 		attribute<LinkTypes>      LinkType   := union_data(., const(LinkTypes/Values/Scheduled,ScheduledLinks,LinkTypes), const(LinkTypes/Values/Transfer,CreateTransfersSet/TransfersByStart,LinkTypes));
-		attribute<geometries/rdc>       fromPoint  := first_point(Line);
-		attribute<geometries/rdc>       toPoint    := last_point(Line);
+		attribute<rdc>            fromPoint  := first_point(Line);
+		attribute<rdc>            toPoint    := last_point(Line);
 		attribute<Places>         FromPlace  := rlookup(fromPoint, Places/Values);
 		attribute<Places>         ToPlace    := rlookup(toPoint, Places/Values);
 		
 		unit<uint32> doubledLinks := union_unit(allLinks, allLinks)
 		{
 			attribute<Time>     Moment         := union_data(., fromTime, toTime);
-			attribute<geometries/rdc> Coords         := union_data(., fromPoint, toPoint);
+			attribute<rdc> Coords         := union_data(., fromPoint, toPoint);
 			attribute<Stops>    StopRef        := rlookup(Coords, Stops/point);
 			attribute<Places>   Place          := rlookup(Coords, Places/Values);
 			attribute<upoint>   MomentxPlace   := point_xy(Moment, Place, upoint);
 			attribute<upoint>   MomentxStop    := point_xy(Moment, StopRef, upoint);
 		}
-		unit<uint32> Places := unique(doubledLinks/Coords), DialogData = "Values", DialogType = "map", FreeData = "False"
+		unit<uint32> Places := unique(doubledLinks/Coords), DialogData = "Values", DialogType = "map"
 		{
+			// attribute<Orgs>   OrgRef    := rlookup(Values, Orgs/point);
+			// attribute<Dests>  DestRef   := rlookup(Values, Dests/point);
+			// attribute<Stops>  StopRef   := rlookup(Values, Stops/point);
+			// attribute<string> LabelText := MakeDefined('Org: '+Orgs/Name[OrgRef], 'Stop: '+Stops/Name[StopRef], 'Dest: '+Dests/Name[DestRef]), DialogData = "LabelText";
 		}
 		
 		unit<uint32> UniqueTimeEvents   := unique(doubledLinks/Moment);
@@ -187,50 +195,55 @@ Template StaticNetsCreator
 			
 			unit<uint32>  MakeWaitingLines := union_unit(UniqueMomentXStop, UniqueMomentXStop)
 			{
-				attribute<geometries/rdc>                 point := union_data(., Stops/point[StopRef], Stops/point[StopRef]);
+				attribute<rdc>                 point := union_data(., Stops/point[StopRef], Stops/point[StopRef]);
 				attribute<UniqueMomentXStop>        Seq   := union_data(., id(UniqueMomentXStop), id(UniqueMomentXStop));
 				attribute<uint32>                   Ord   := union_data(., const(0,UniqueMomentXStop,uint32), const(1,UniqueMomentXStop,uint32));
 			}
 		}
 		unit<uint32> WaitingAtStop := UniqueMomentXStop 
 		{
-			attribute<geometries/rdc>     line (arc):= points2sequence(UniqueMomentXStop/MakeWaitingLines/point, UniqueMomentXStop/MakeWaitingLines/Seq, UniqueMomentXStop/MakeWaitingLines/Ord);
+			attribute<rdc>          line (arc):= points2sequence(UniqueMomentXStop/MakeWaitingLines/point, UniqueMomentXStop/MakeWaitingLines/Seq, UniqueMomentXStop/MakeWaitingLines/Ord);
 			attribute<Stops>        FromStop  := StopRef;
 			attribute<Stops>        ToStop    := StopRef[NextMoment];
 			attribute<AllPlaces>    FromPlace := Stops/PlaceRef[FromStop];
 			attribute<AllPlaces>    ToPlace   := Stops/PlaceRef[ToStop];
-			attribute<geometries/rdc>     FromPoint := Stops/Point[FromStop];
-			attribute<geometries/rdc>     ToPoint   := Stops/Point[ToStop];
+			attribute<rdc>          FromPoint := Stops/Point[FromStop];
+			attribute<rdc>          ToPoint   := Stops/Point[ToStop];
 			attribute<Time>         FromTime  := TimeRef;
 			attribute<Time>         ToTime    := TimeRef[NextMoment];
-			attribute<Time>         Duration  := FromTime <= ToTime ? ToTime - FromTime : (ToTime + #Time) - FromTime; // duration in seconds
+			attribute<s_f>          Duration  := FromTime <= ToTime ? float32(ToTime - FromTime)[s_f] : float32((ToTime + #Time) - FromTime)[s_f]; // duration in seconds
 			attribute<string>       LabelText := 'Waiting at stop: ' + Stops/Name[FromStop] + ' from ' + Time/LabelText[FromTime] + ' to ' + Time/LabelText[ToTime], DialogType = "LabelText";
 		}
-		unit<uint32> NodeSet:= unique(doubledLinks/MomentXPlace), DialogData = "Place", DialogType = "map", FreeData = "False"
+		unit<uint32> NodeSet:= unique(doubledLinks/MomentXPlace), DialogData = "Place", DialogType = "map"
 		{
-			attribute<AllPlaces>PlaceRef  := pointRow(Values);
-			attribute<Time>		TimeRef   := pointCol(Values);
-			attribute<geometries/rdc> Place     := AllPlaces/Values[PlaceRef];
+			attribute<AllPlaces> PlaceRef  := pointRow(Values);
+			attribute<Time>      TimeRef   := pointCol(Values);
+			attribute<rdc>       Place     := AllPlaces/Values[PlaceRef];
 		}
 	}
 
-	unit<uint32> Static_Net := union_unit(allLinks, allLinks/WaitingAtStop), DialogData = "Line", DialogType = "Map", FreeData = "False"
+	unit<uint32> Static_Net := union_unit(allLinks, allLinks/WaitingAtStop), DialogData = "Line", DialogType = "Map"
 	{
-		attribute<geometries/rdc>  Line (arc) := union_data(., allLinks/line, allLinks/WaitingAtStop/line);
+		attribute<rdc>       Line (arc) := union_data(., allLinks/line, allLinks/WaitingAtStop/line);
 		attribute<AllPlaces> FromPlace  := union_data(., allLinks/FromPlace, allLinks/WaitingAtStop/FromPlace);
 		attribute<AllPlaces> ToPlace    := union_data(., allLinks/ToPlace, allLinks/WaitingAtStop/ToPlace);
-		attribute<geometries/rdc>  FromPoint  := union_data(., allLinks/FromPoint, allLinks/WaitingAtStop/FromPoint);
-		attribute<geometries/rdc>  ToPoint    := union_data(., allLinks/ToPoint, allLinks/WaitingAtStop/ToPoint);
+		attribute<rdc>       FromPoint  := union_data(., allLinks/FromPoint, allLinks/WaitingAtStop/FromPoint);
+		attribute<rdc>       ToPoint    := union_data(., allLinks/ToPoint, allLinks/WaitingAtStop/ToPoint);
 		attribute<string>    LabelText  := union_data(., allLinks/LabelText, allLinks/WaitingAtStop/LabelText);
 		attribute<Time>      FromTime   := union_data(., allLinks/fromTime, allLinks/WaitingAtStop/fromTime);
 		attribute<Time>      ToTime     := union_data(., allLinks/toTime, allLinks/WaitingAtStop/toTime);
-		attribute<Time>      Duration   := union_data(., allLinks/Duration, allLinks/WaitingAtStop/Duration);
+		attribute<s_f>       Duration   := union_data(., allLinks/Duration, allLinks/WaitingAtStop/Duration);
 		attribute<LinkTypes> LinkType   := union_data(., allLinks/LinkType, const(LinkTypes/Values/Waiting_at_Stop,allLinks/WaitingAtStop,LinkTypes));
 		attribute<NodeSet>   F1         := rlookup(point_xy(FromTime, FromPlace), NodeSet/Values);
 		attribute<NodeSet>   F2         := rlookup(point_xy(ToTime, ToPlace), NodeSet/Values);
 		
-		attribute<uint32> LinkTypeSum (LinkTypes):= pcount(LinkType);
-		unit<uint32>  NodeSet   := allLinks/NodeSet, FreeData = "False";
-		unit<uint32>  NetCheck  := connected_parts(F1, F2);
+		attribute<Classifications/ModesList/List_selectie> Mode       := union_data(., allLinks/Mode, const(Classifications/ModesList/List_selectie/V/Waiting, allLinks/WaitingAtStop, Classifications/ModesList/List_selectie));
+		attribute<uint32>                                  TripRef    := union_data(., allLinks/TripRef, const(0/0, allLinks/WaitingAtStop));
+		attribute<string>                                  RouteName    := union_data(., allLinks/RouteName, const('Waiting', allLinks/WaitingAtStop));
+
+		
+		attribute<uint32> LinkTypeSum (LinkTypes) := pcount(LinkType);
+		unit<uint32>      NodeSet                 := allLinks/NodeSet;
+		unit<uint32>      NetCheck                := connected_parts(F1, F2);
 	}
 }

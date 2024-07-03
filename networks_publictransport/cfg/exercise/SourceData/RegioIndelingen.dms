@@ -1,83 +1,43 @@
 container RegioIndelingen : using = "geometries"
 {
-	container impl
+	unit<uint32> PC4_punten
+	:	StorageName     = "%SourceDataDir%/GeoDMS_Academy/pc4_xy_tm2020.gpkg"
+	,	StorageType = "gdal.vect"
+	, 	storagereadOnly = "true"
+	,	SyncMode = "none"
 	{
-		unit<uint32> Read_PC4_shape
-		:	StorageName     = "%ProjDir%/Data/pc4_xy_tm2020.shp"
-		,	StorageType     = "gdal.vect"
-		,	StorageReadOnly = "True"
-		, 	FreeData = "False"
-		{
-			attribute<geometries/rdc>       geometry;
-			attribute<string>               postcode4;
-		}
-		
-		unit<uint32> Make_PC4_punten_FSS := Read_PC4_shape
-		,	StorageName     = "%ProjDir%/Data/pc4_xy_tm2020.fss"
-		{
-			attribute<geometries/rdc>       geometry      := Read_PC4_shape/geometry;
-			attribute<string>               PC4           := Read_PC4_shape/postcode4;
-			attribute<string>               label         := PC4, DialogType = "LabelText";
-		}
-		unit<uint32> Read_Provincie_gml
-		:	StorageName     = "%ProjDir%/Data/Provinciegrenzen_2019.gml"
-		,	StorageType     = "gdal.vect"
-		,	StorageReadOnly = "True"
-		, 	FreeData = "False"
-		{
-			attribute<geometries/rdc>       geometry (poly);
-			attribute<string>               provincienaam;
-		}
-		
-		unit<uint32> Make_Provincie_fss := Read_Provincie_gml
-		,	StorageName     = "%ProjDir%/Data/Provinciegrenzen_2019.fss"
-		{
-			attribute<geometries/rdc>       geometry (poly) := Read_Provincie_gml/geometry;
-			attribute<string>               provincienaam   := Read_Provincie_gml/provincienaam;
-			attribute<string>               label           := provincienaam, DialogType = "LabelText";
-		}
-		
-		unit<uint32> Read_PC4_punten_FSS
-		:	StorageName     = "%ProjDir%/Data/pc4_xy_tm2020.fss"
-		,	StorageReadOnly = "True"
-		,	DialogType      = "map"
-		,	DialogData      = "point"
-		{
-			attribute<rdc>                  geometry;
-			attribute<string>               PC4;
-			attribute<string>               label                         : DialogType = "LabelText";
-		}
-		
-		unit<uint32> Read_Provincies_FSS
-		:	StorageName     = "%ProjDir%/Data/Provinciegrenzen_2019.fss"
-		,	StorageReadOnly = "true"
-		{
-			attribute<geometries/rdc> geometry (poly);
-			attribute<string>         label;
-		}
-	}
-	
-	unit<uint32> PC4_punten := =ModelParameters/RegioIndelingen_Ontkoppeld ? 'impl/Read_PC4_punten_FSS' : 'impl/Make_PC4_punten_fss'
-	{
+		attribute<rdc>                  geometry;
+		attribute<string>               label;
 		attribute<string>               name                          := label;
-		attribute<rdc>                  point                         := geometry;
-		attribute<.>                    prov_rel                      := point_in_polygon(point, Provincies/geometry);
+		attribute<bool>                 IsSA                          := IsDefined(point_in_polygon(geometry, Provincies/sub/geometry));
 		
-		unit<uint32> sub := ='subset(prov_rel == '+string(ModelParameters/Advanced/ProvSubset_id)+')'
-		,	DialogType      = "map"
-		,	DialogData      = "point"
+		unit<uint32> sub := subset(IsSA)
 		{
-			attribute<rdc>                  point                         := ../point[nr_OrgEntity];
+			attribute<rdc>                  geometry                      := ../geometry[nr_OrgEntity];
+			attribute<rdc>                  point                         := geometry;
 			attribute<string>               name                          := ../name[nr_OrgEntity];
 			attribute<string>               label                         := name, DialogType = "LabelText";
 		}
-	
 	}
 	
-	unit<uint32> Provincies := =ModelParameters/RegioIndelingen_Ontkoppeld ? 'impl/Read_Provincies_FSS' : 'impl/Make_Provincie_fss'
+	unit<uint32> Provincies
+	:	StorageName     = "%SourceDataDir%/GeoDMS_Academy/Provinciegrenzen_2019.gml"
+	,	StorageType     = "gdal.vect"
+	,	StorageReadOnly = "True"
+	,	SyncMode = "none"
 	{
-		attribute<string>         name                       := replace(label, '-','_');
+		attribute<geometries/rdc>       geometry (poly);
+		attribute<string>               provincienaam;
+		attribute<string>               name           := AsItemName(provincienaam);
+		attribute<string>               label          := provincienaam;
 		
-		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+		unit<uint32> sub := subset(name == 'Noord_Holland')
+		{
+			attribute<geometries/rdc>       geometry (poly) := ../geometry[nr_OrgEntity];
+			attribute<string>               name            := ../name[nr_OrgEntity];
+			attribute<string>               label           := ../label[nr_OrgEntity];
+		}
+	
 	}
+
 }
