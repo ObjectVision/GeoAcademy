@@ -1,0 +1,70 @@
+container Poly_2_grid_2_simplified_poly
+{
+	container Units
+	{
+		unit<float32> m := baseunit('m', float32);
+	}
+	#include <geography.dms>
+	#include <sourcedata.dms>
+
+	unit<uint2> Direction 
+	{
+		attribute<string> Label : [ 'North', 'East', 'South', 'West'];
+		container V:= for_each_nedv(Label, string(ID(.))+'[..]', void, .);
+		attribute<.> Next    := union_data(., V/West, V/North, V/East, V/South);
+		attribute<.> Reverse := union_data(., V/South, V/West, V/North, V/East);
+	}
+
+	#include <grid2poly_spoint.dms>
+	#include <grid2poly_ipoint.dms>
+
+	template SimplifyPolygons_spoint
+	{
+		// begin case parameters
+		unit<uint32>       ShapeDomain;
+		unit<spoint>       domain_grid;
+		parameter<float64> simplifyFactor;
+		// end case parameters
+
+		attribute<Geography/point_rd> Shape_geometry (ShapeDomain, poly) := ShapeDomain/geometry;
+
+		attribute<ShapeDomain> ShapeDomain_rel (domain_grid) := poly2grid_untiled(Shape_geometry, domain_grid);
+		container SimplifiedPolygons                         := grid2poly_spoint(domain_grid, ShapeDomain, ShapeDomain_rel, simplifyFactor);
+	}
+
+	template SimplifyPolygons_ipoint
+	{
+		// begin case parameters
+		unit<uint32>       ShapeDomain;
+		unit<ipoint>       domain_grid;
+		parameter<float64> simplifyFactor;
+		// end case parameters
+
+		attribute<Geography/point_rd> Shape_geometry (ShapeDomain, poly) := ShapeDomain/geometry;
+
+		attribute<ShapeDomain> ShapeDomain_rel (domain_grid) := poly2grid_untiled(Shape_geometry, domain_grid);
+		container SimplifiedPolygons                         := grid2poly_ipoint(domain_grid, ShapeDomain, ShapeDomain_rel, simplifyFactor);
+	}
+
+	container examples: IntegrityCheck = "(GeoDmsMajorVersionNumber() >= 14 && GeoDmsMinorVersionNumber() >= 14) || GeoDmsMajorVersionNumber() >= 15" 
+	{
+		container simplify_gridsize
+		{
+			container d500_spoint := SimplifyPolygons_spoint(SourceData/shape, Geography/gridcel_500m/domain, 500.0);
+			container d100_spoint := SimplifyPolygons_spoint(SourceData/shape, Geography/gridcel_100m/domain, 100.0);
+			container d10_ipoint  := SimplifyPolygons_ipoint(SourceData/shape, Geography/gridcel_10m/domain,   10.0);
+		}
+		container simplify_m10
+		{
+			container d500_spoint := SimplifyPolygons_spoint(SourceData/shape, Geography/gridcel_500m/domain, 10.0);
+			container d100_spoint := SimplifyPolygons_spoint(SourceData/shape, Geography/gridcel_100m/domain, 10.0);
+			container d10_ipoint  := SimplifyPolygons_ipoint(SourceData/shape, Geography/gridcel_10m/domain,  10.0);
+		}
+		container simplify_m0 // points on a straight line that do not change the shape of the resulting feature are always filtered out
+		{
+			container d500_spoint := SimplifyPolygons_spoint(SourceData/shape, Geography/gridcel_500m/domain, 0.0);
+			container d100_spoint := SimplifyPolygons_spoint(SourceData/shape, Geography/gridcel_100m/domain, 0.0);
+			container d10_ipoint  := SimplifyPolygons_ipoint(SourceData/shape, Geography/gridcel_10m/domain,  0.0);
+		}
+	}
+}

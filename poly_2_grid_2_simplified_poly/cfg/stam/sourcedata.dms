@@ -1,0 +1,98 @@
+container SourceData: Using = "Units;Geography"
+{
+	container Circle
+	{
+		unit<uint32> template: nrofrows = 65
+		{
+			attribute<float64> angle := float64(id(.)) * 2d * float64(pi()) / 64d;
+			attribute<float64> x     := cos(angle);
+			attribute<float64> y     := sin(angle);
+			attribute<dpoint>  xy    := point_xy(cos(angle), sin(angle));
+		}
+
+		unit<uint32> shape: nrofrows = 1
+		{
+			attribute<point_rd> centre_point := const(point_xy(156000f, 461000f, point_rd),.);
+		}
+
+		parameter<m> radius   := 500[m];
+
+		unit<uint32> pointset := combine(shape, template)
+		{
+			attribute<point_rd> point :=
+				point_xy(
+					 pointcol(shape/centre_point[nr_1]) + radius * float32(circle/template/x[nr_2])
+					,pointrow(shape/centre_point[nr_1]) + radius * float32(circle/template/y[nr_2])
+					,point_rd
+				);
+			attribute<uint32> ordinal := #pointset - nr_2 - 1;
+		}
+		attribute<point_rd> geometry (poly, shape) := points2sequence(pointset/point, pointset/nr_1, pointset/ordinal);
+	}
+
+	container Square
+	{
+		unit<uint32> shape: nrofrows = 1
+		{
+			attribute<point_rd> left_top     := const(point_xy(157500f, 461500f, point_rd),.);
+			attribute<point_rd> right_top    := const(point_xy(158500f, 461500f, point_rd),.);
+			attribute<point_rd> right_bottom := const(point_xy(158500f, 460500f, point_rd),.);
+			attribute<point_rd> left_bottom  := const(point_xy(157500f, 460500f, point_rd),.);
+		}
+
+		unit<uint32> pointset : nrofrows = 5
+		{
+			attribute<point_rd> point    := union_data(., shape/left_top, shape/right_top, shape/right_bottom, shape/left_bottom, shape/left_top);
+			attribute<shape>    sequence := const(0,., shape);
+			attribute<uint32>   order    := id(.);
+		}
+
+		attribute<point_rd> geometry (poly, shape) := points2sequence(pointset/point, pointset/sequence, pointset/order);
+	}
+
+	container Triangles
+	{
+		container first
+		{
+			unit<uint32> shape: nrofrows = 1
+			{
+				attribute<point_rd> top          := const(point_xy(158000f, 459500f, point_rd),.);
+				attribute<point_rd> right_bottom := const(point_xy(158500f, 458500f, point_rd),.);
+				attribute<point_rd> left_bottom  := const(point_xy(157500f, 458500f, point_rd),.);
+			}
+
+			unit<uint32> pointset : nrofrows = 4
+			{
+				attribute<point_rd> point    := union_data(., shape/top, shape/right_bottom, shape/left_bottom, shape/top);
+				attribute<shape>    sequence := const(0,., shape);
+				attribute<uint32>   order    := id(.);
+			}
+
+			attribute<point_rd> geometry (poly, shape) := points2sequence(pointset/point, pointset/sequence, pointset/order);
+		}
+
+		container second
+		{
+			unit<uint32> shape: nrofrows = 1
+			{
+				attribute<point_rd> bottom    := const(point_xy(157500f, 458500f, point_rd),.);
+				attribute<point_rd> right_top := const(point_xy(158000f, 459500f, point_rd),.);
+				attribute<point_rd> left_top  := const(point_xy(157000f, 459500f, point_rd),.);
+			}
+
+			unit<uint32> pointset : nrofrows = 4
+			{
+				attribute<point_rd> point    := union_data(., shape/left_top, shape/right_top, shape/bottom, shape/left_top);
+				attribute<shape>    sequence := const(0,., shape);
+				attribute<uint32>   order    := id(.);
+			}
+
+			attribute<point_rd> geometry (poly, shape) := points2sequence(pointset/point, pointset/sequence, pointset/order);
+		}
+	}
+
+	unit<uint32> Shape : nrofrows = 4
+	{
+		attribute<point_rd> geometry (poly) := union_data(., circle/geometry, square/geometry, triangles/first/geometry, triangles/second/geometry);
+	}
+}

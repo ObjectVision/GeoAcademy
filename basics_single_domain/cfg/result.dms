@@ -10,10 +10,10 @@ container basics_single_domain_result
 
 	container Geography // Define the extend of the scene and the projection 
 	{
-		unit<fpoint> rdc_base : format = "EPSG:28992", DialogData = "ngr_layer";               // Rijksdriehoekstelsel, a 2D cartesian coordinate system for the netherlands
+		unit<fpoint> rdc_base : SpatialReference = "EPSG:28992", DialogData = "wmts_layer";    // Rijksdriehoekstelsel, a 2D cartesian coordinate system for the netherlands
 		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f)); // Define a 2D range consisting of 2D cartesian coordinates, later used for the "province" domain unit geometry attribute
 
-		#include<ngr_layer.dms>                                                                // Tiles for background layer
+		#include<wmts_layer.dms>                                                               // Tiles for background layer
 	}
 
 	container SourceData
