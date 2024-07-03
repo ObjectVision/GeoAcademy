@@ -37,12 +37,12 @@ container Buffers : Using = "Units;Geography"
 			{
 				attribute<fpoint> xy :=
 					point(
-						  src/x[nr_1] + float32(radius) * float32(impl/circle/x[nr_2])
-						, src/y[nr_1] + float32(radius) * float32(impl/circle/y[nr_2])
+						  src/x[first_rel] + float32(radius) * float32(impl/circle/x[second_rel])
+						, src/y[first_rel] + float32(radius) * float32(impl/circle/y[second_rel])
 						, geography/rdc
 					);
 			}
-			attribute<geography/rdc> geometry (src, polygon) := points2sequence(points/xy, points/nr_1, #impl/circle - points/nr_2 - 1);
+			attribute<geography/rdc> geometry (src, polygon) := points2sequence(points/xy, points/first_rel, #impl/circle - points/second_rel - 1);
 		}
 
 		template make_rhombus

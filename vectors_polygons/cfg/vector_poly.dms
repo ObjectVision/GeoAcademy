@@ -29,13 +29,13 @@ container GeoDMS_Academy_Polygon_Processing
 		{
 			attribute<rdc_meter> point :=
 				point(
-					 pointcol(shape/centre_point[nr_1]) + radius * float32(circle/template/x[nr_2])
-					,pointrow(shape/centre_point[nr_1]) + radius * float32(circle/template/y[nr_2])
+					 pointcol(shape/centre_point[first_rel]) + radius * float32(circle/template/x[second_rel])
+					,pointrow(shape/centre_point[first_rel]) + radius * float32(circle/template/y[second_rel])
 					,rdc_meter
 				);
-			attribute<uint32> ordinal := #pointset - nr_2 - 1;
+			attribute<uint32> ordinal := #pointset - second_rel - 1;
 		}
-		attribute<rdc_meter> geometry (poly, shape) := points2sequence(pointset/point, pointset/nr_1, pointset/ordinal);
+		attribute<rdc_meter> geometry (poly, shape) := points2sequence(pointset/point, pointset/first_rel, pointset/ordinal);
 	}
 
 	container Square: Using = "Units;Geography"

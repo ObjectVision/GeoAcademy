@@ -221,8 +221,8 @@ container GeoDMS_Academy_RelationalModel
 			{
 				unit<uint32> CartesianProduct := combine(DDL_Create/Apartment, DDL_Create/Building)
 				{
-					attribute<string> ApartmentId   := DDL_Create/Apartment/id[nr_1];
-					attribute<string> BuildingId    := DDL_Create/Building/id[nr_2];
+					attribute<string> ApartmentId   := DDL_Create/Apartment/id[first_rel];
+					attribute<string> BuildingId    := DDL_Create/Building/id[second_rel];
 					attribute<bool>   JoinCondition := 
 						isDefined(
 							rlookup(
@@ -264,14 +264,14 @@ container GeoDMS_Academy_RelationalModel
 		{
 			unit<uint32> CartesianProduct := combine(DDL_Create/Apartment,DDL_Create/Building)
 			{
-				attribute<string>     AppartmentId     := DDL_Create/Apartment/Id[nr_1];
-				attribute<string>     Street           := DDL_Create/Apartment/Street[nr_1];
-				attribute<uint32>     Number           := DDL_Create/Apartment/Number[nr_1];
-				attribute<string>     ZipCode          := DDL_Create/Apartment/ZipCode[nr_1];
-				attribute<string>     Town             := DDL_Create/Apartment/Town[nr_1];
+				attribute<string>     AppartmentId     := DDL_Create/Apartment/Id[first_rel];
+				attribute<string>     Street           := DDL_Create/Apartment/Street[first_rel];
+				attribute<uint32>     Number           := DDL_Create/Apartment/Number[first_rel];
+				attribute<string>     ZipCode          := DDL_Create/Apartment/ZipCode[first_rel];
+				attribute<string>     Town             := DDL_Create/Apartment/Town[first_rel];
 
-				attribute<units/Year> ConstructionYear := DDL_Create/Building/ConstructionYear[nr_2];
-				attribute<units/m2>   Footprint        := DDL_Create/Building/Footprint[nr_2];
+				attribute<units/Year> ConstructionYear := DDL_Create/Building/ConstructionYear[second_rel];
+				attribute<units/m2>   Footprint        := DDL_Create/Building/Footprint[second_rel];
 			}
 		}
 	}

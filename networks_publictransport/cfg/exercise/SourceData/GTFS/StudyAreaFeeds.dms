@@ -9,7 +9,7 @@ container StudyAreaFeeds
 		attribute<geometries/rdc> point       := LoadFeeds/Stops/point;
 		attribute<uint32>	orgStopId   := id(LoadFeeds/Stops);
 		attribute<uint32> 	feedId      := const(0, LoadFeeds/Stops, uint32);
-		attribute<upoint>	uni_StopId  := point(feedId, orgStopId, upoint);
+		attribute<upoint>	uni_StopId  := point_xy(feedId, orgStopId, upoint);
 		attribute<string>	Name        := LoadFeeds/Stops/stop_name;
 		attribute<string> 	LabelText   := Name, DialogType = "LabelText";
 		
@@ -22,7 +22,7 @@ container StudyAreaFeeds
 		attribute<StopsGrid> GridId       := point[StopsGrid];
 		attribute<uint32>    Grid1D       := StopsGrid/uniId[GridId];
 		attribute<uint32>    cumu_in_grid := cumulate(const(1,.,uint32), GridId) - 1;
-		attribute<upoint>    unique_id    := point(cumu_in_grid, Grid1D, upoint);
+		attribute<upoint>    unique_id    := point_xy(cumu_in_grid, Grid1D, upoint);
 		attribute<uint32>    nTransfers   := StopsGrid/nTransfers[GridId];
 		
 		unit<spoint> StopsGrid := MakeStopsGrid/StopsGrid
@@ -38,12 +38,12 @@ container StudyAreaFeeds
 		
 		container MakeStopsGrid 
 		{
-			parameter<geometries/rdc> bottomleft := point(min(pointCol(point)), min(PointRow(point)), geometries/rdc);
-			parameter<geometries/rdc>	upperright := point(max(pointCol(point)), max(PointRow(point)), geometries/rdc);
-			parameter<geometries/rdc>	resolution := point((ModelParameters/MaxTransferDistKm) * 0.5f, (ModelParameters/MaxTransferDistKm) * 0.5f, geometries/rdc);
-			parameter<spoint>   size       := spoint((upperright - bottomleft) / resolution) + point(1s, 1s, spoint);
+			parameter<geometries/rdc> bottomleft := point_xy(min(pointCol(point)), min(PointRow(point)), geometries/rdc);
+			parameter<geometries/rdc>	upperright := point_xy(max(pointCol(point)), max(PointRow(point)), geometries/rdc);
+			parameter<geometries/rdc>	resolution := point_xy((ModelParameters/MaxTransferDistKm) * 0.5f, (ModelParameters/MaxTransferDistKm) * 0.5f, geometries/rdc);
+			parameter<spoint>   size       := spoint((upperright - bottomleft) / resolution) + point_xy(1s, 1s, spoint);
 		
-			unit<spoint> StopsGrid := range(gridset(geometries/rdc, resolution, bottomleft, wpoint), point(0s, 0s), size)
+			unit<spoint> StopsGrid := range(gridset(geometries/rdc, resolution, bottomleft, wpoint), point_xy(0s, 0s), size)
 			{
 			}
 		}
@@ -64,7 +64,7 @@ container StudyAreaFeeds
 		attribute<ModesList/List> 	Mode:				 = LoadFeeds/ScheduledLinks/Mode;
 		attribute<Stops>	FromStop:			 = rlookup(uni_fStopId, Stops/uni_StopId);
 		attribute<Stops>	ToStop:				 = rlookup(uni_tStopId, Stops/uni_StopId);
-		attribute<upoint>	uni_fStopId:		 = point(feedId, OrgfromStop, upoint);
-		attribute<upoint>	uni_tStopId:		 = point(feedId, OrgtoStop, upoint);	
+		attribute<upoint>	uni_fStopId:		 = point_xy(feedId, OrgfromStop, upoint);
+		attribute<upoint>	uni_tStopId:		 = point_xy(feedId, OrgtoStop, upoint);	
 	}
 }

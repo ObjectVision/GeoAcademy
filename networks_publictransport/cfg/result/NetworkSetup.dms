@@ -35,11 +35,11 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 			container Sparse_uitwerking_Org2Stop_W
 			{
 				unit<uint32> OD_path := RoadNets_Org2Stop_W/Network/ODMatrix;
-				unit<uint64> AB := join_equal_values_uint64(OD_path/EindRef, ScheduledSpaceTimeEvents/stopRef)
+				unit<uint32> AB := join_equal_values_uint32(OD_path/EindRef, ScheduledSpaceTimeEvents/stopRef)
 				{
-					attribute<Stops>                      Stop_rel          := nr_X_rel;
-					attribute<OD_path>                    OD_rel            := nr_1_rel;
-					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := nr_2_rel;
+					attribute<Stops>                      Stop_rel          := X_rel;
+					attribute<OD_path>                    OD_rel            := first_rel;
+					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := second_rel;
 					
 					attribute<allLinks/Places>            Place_rel         := stops/PlaceRef[Stop_rel];
 					attribute<Org>                        Org_rel           := OD_path/StartRef[OD_rel];
@@ -53,10 +53,10 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 					attribute<Time>                       toTime_Walk       := ScheduledSpaceTimeEvents/TimeRef[SSTE_rel];
 					attribute<string>                     LabelText         := OD_path/labeltext[OD_rel], DialogType = "LabelText";
 					
-					attribute<upoint>                     MomentxPlace      := point(toTime_Walk, Place_rel, upoint);
+					attribute<upoint>                     MomentxPlace      := point_xy(toTime_Walk, Place_rel, upoint);
 					attribute<allLinks/NodeSet>           NodeRef           := rlookup(MomentxPlace, allLinks/NodeSet/values);
 					
-					unit<uint64> uq_stops := unique(Place_rel)
+					unit<uint32> uq_stops := unique(Place_rel)
 					{
 						attribute<allLinks/Places> UsedStops := values;
 					}
@@ -66,11 +66,11 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 			container Sparse_uitwerking_Org2Stop_B
 			{
 				unit<uint32> OD_path := RoadNets_Org2Stop_B/Network/ODMatrix;
-				unit<uint64> AB := join_equal_values_uint64(OD_path/EindRef, ScheduledSpaceTimeEvents/stopRef)
+				unit<uint32> AB := join_equal_values_uint32(OD_path/EindRef, ScheduledSpaceTimeEvents/stopRef)
 				{
-					attribute<Stops>                      Stop_rel          := nr_X_rel;
-					attribute<OD_path>                    OD_rel            := nr_1_rel;
-					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := nr_2_rel;
+					attribute<Stops>                      Stop_rel          := X_rel;
+					attribute<OD_path>                    OD_rel            := first_rel;
+					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := second_rel;
 					
 					attribute<allLinks/Places>            Place_rel         := stops/PlaceRef[Stop_rel];
 					attribute<Org>                        Org_rel           := OD_path/StartRef[OD_rel];
@@ -84,10 +84,10 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 					attribute<Time>                       toTime_Bike       := ScheduledSpaceTimeEvents/TimeRef[SSTE_rel];
 					attribute<string>                     LabelText         := OD_path/labeltext[OD_rel], DialogType = "LabelText";
 					
-					attribute<upoint>                     MomentxPlace      := point(toTime_Bike, Place_rel, upoint);
+					attribute<upoint>                     MomentxPlace      := point_xy(toTime_Bike, Place_rel, upoint);
 					attribute<allLinks/NodeSet>           NodeRef           := rlookup(MomentxPlace, allLinks/NodeSet/values);
 					
-					unit<uint64> uq_stops := unique(Place_rel)
+					unit<uint32> uq_stops := unique(Place_rel)
 					{
 						attribute<allLinks/Places> UsedStops := values;
 					}
@@ -97,11 +97,11 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 			container Sparse_uitwerking_Stop2Dest_W
 			{
 				unit<uint32> OD_path := RoadNets_Stop2Dest_W/Network/ODMatrix;
-				unit<uint64> AB := join_equal_values_uint64(OD_path/StartRef, ScheduledSpaceTimeEvents/stopRef)
+				unit<uint32> AB := join_equal_values_uint32(OD_path/StartRef, ScheduledSpaceTimeEvents/stopRef)
 				{
-					attribute<Stops>                      Stop_rel          := nr_X_rel;
-					attribute<OD_path>                    OD_rel            := nr_1_rel;
-					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := nr_2_rel;
+					attribute<Stops>                      Stop_rel          := X_rel;
+					attribute<OD_path>                    OD_rel            := first_rel;
+					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := second_rel;
 					
 					attribute<allLinks/Places>            Place_rel         := stops/PlaceRef[Stop_rel];
 					attribute<Dest>                       Dest_rel          := OD_path/EindRef[OD_rel];
@@ -117,10 +117,10 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 																				: FromTime_Walk + Duration_Walk;
 					attribute<string>                     LabelText         := OD_path/labeltext[OD_rel], DialogType = "LabelText";
 					
-					attribute<upoint>                     MomentxPlace      := point(FromTime_Walk, Place_rel, upoint);
+					attribute<upoint>                     MomentxPlace      := point_xy(FromTime_Walk, Place_rel, upoint);
 					attribute<allLinks/NodeSet>           NodeRef           := rlookup(MomentxPlace, allLinks/NodeSet/values);
 					
-					unit<uint64> uq_stops := unique(Place_rel)
+					unit<uint32> uq_stops := unique(Place_rel)
 					{
 						attribute<allLinks/Places> UsedStops := values;
 					}
@@ -130,11 +130,11 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 			container Sparse_uitwerking_Stop2Dest_B
 			{
 				unit<uint32> OD_path := RoadNets_Stop2Dest_B/Network/ODMatrix;
-				unit<uint64> AB := join_equal_values_uint64(OD_path/StartRef, ScheduledSpaceTimeEvents/stopRef)
+				unit<uint32> AB := join_equal_values_uint32(OD_path/StartRef, ScheduledSpaceTimeEvents/stopRef)
 				{
-					attribute<Stops>                      Stop_rel          := nr_X_rel;
-					attribute<OD_path>                    OD_rel            := nr_1_rel;
-					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := nr_2_rel;
+					attribute<Stops>                      Stop_rel          := X_rel;
+					attribute<OD_path>                    OD_rel            := first_rel;
+					attribute<ScheduledSpaceTimeEvents>   SSTE_rel          := second_rel;
 					
 					attribute<allLinks/Places>            Place_rel         := stops/PlaceRef[Stop_rel];
 					attribute<Dest>                       Dest_rel          := OD_path/EindRef[OD_rel];
@@ -148,10 +148,10 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 																				: FromTime_Bike + Duration_Bike;
 					attribute<string>                     LabelText         := OD_path/labeltext[OD_rel], DialogType = "LabelText";
 					
-					attribute<upoint>                     MomentxPlace      := point(FromTime_Bike, Place_rel, upoint);
+					attribute<upoint>                     MomentxPlace      := point_xy(FromTime_Bike, Place_rel, upoint);
 					attribute<allLinks/NodeSet>           NodeRef           := rlookup(MomentxPlace, allLinks/NodeSet/values);
 					
-					unit<uint64> uq_stops := unique(Place_rel)
+					unit<uint32> uq_stops := unique(Place_rel)
 					{
 						attribute<allLinks/Places> UsedStops := values;
 					}

@@ -67,12 +67,12 @@ container LoadFeeds : using = "classifications"
 		attribute<float64>  stop_lon   := float64(ReadFSS/Stops/data/stop_lon);
 		attribute<string>	stop_id	   := ReadFSS/Stops/data/stop_id;
 		attribute<string>   stop_name  := ReadFSS/Stops/data/stop_name;
-		attribute<dpoint>   point_wgs  := point(float64(stop_lon), float64(stop_lat), geometries/wgs84_base);
+		attribute<dpoint>   point_wgs  := point_xy(float64(stop_lon), float64(stop_lat), geometries/wgs84_base);
 		attribute<fpoint>   point_rd   := LatLongWgs842RD(point_wgs[fpoint], rdc);
 		attribute<rdc>      point      := point_rd;
 		attribute<string>   LabelText  := stop_name, DialogType = "LabelText";
 		attribute<bool>     StopUsed   := (any(AllStopTimes/SelToday, AllStopTimes/pStopRef) || any(AllStopTimes/SelYesterday, AllStopTimes/pStopRef));
-		attribute<.>        StudyArea_rel := point_in_polygon(point, /geometries/selection_polygon/polygon);
+		attribute<geometries/selection_polygon>        StudyArea_rel := point_in_polygon(point, geometries/selection_polygon/polygon);
 		attribute<bool>     InStudyArea   	:= IsDefined(StudyArea_rel);
 		attribute<bool>		TripInStudyArea	:= any(AllStopTimes/TripInStudyArea && (AllStopTimes/SelToday || AllStopTimes/SelYesterday), AllStopTimes/pStopRef);
 	}
@@ -85,7 +85,7 @@ container LoadFeeds : using = "classifications"
 		attribute<rdc>              point           := protoStops/point[Nr_OrgEntity];
 		attribute<string>           LabelText       := stop_name, DialogType = "LabelText";
 		attribute<uint32>           NrTripsPerDay   := pcount(LoadFeeds/AllStopTimes/seltoday ? LoadFeeds/AllStopTimes/StopRef : (0/0))[Stops];
-		attribute<ModesList/List>   Mode            := modus(LoadFeeds/AllStopTimes/Mode, LoadFeeds/AllStopTimes/StopRef);
+		attribute<ModesList/List_selectie>   Mode            := modus(LoadFeeds/AllStopTimes/Mode, LoadFeeds/AllStopTimes/StopRef);
 		
 	}
 	
@@ -99,7 +99,7 @@ container LoadFeeds : using = "classifications"
 		attribute<Time>      depTime    := union_data(., AllStopTimes/Yesterday/Links/depTime, 	AllStopTimes/Today/Links/depTime);
 		attribute<Time>      arrTime    := union_data(., AllStopTimes/Yesterday/Links/arrTime, 	AllStopTimes/Today/Links/arrTime);
 		attribute<uint32>    TripRef    := union_data(., AllStopTimes/Yesterday/Links/TripRef,  	AllStopTimes/Today/Links/TripRef);
-		attribute<ModesList/List>     Mode       := Trips/Mode[TripRef];
+		attribute<ModesList/List_selectie> Mode       := Trips/Mode[TripRef];
 		attribute<string>     RouteName       := Trips/RouteName[TripRef];
 	}
 	
@@ -159,20 +159,20 @@ container LoadFeeds : using = "classifications"
 		attribute<bool>             StopinStudyArea	:= protoStops/inStudyArea[pStopRef];
 		attribute<bool>             TripInStudyArea	:= Trips/inStudyArea[TripRef];
 		
-		attribute<ModesList/List>   Mode            := Trips/Mode[TripRef];
-		attribute<ModesList/List>   Mode_perstop    := modus(Mode, StopRef)[StopRef];
+		attribute<ModesList/List_selectie>   Mode            := Trips/Mode[TripRef];
+		attribute<ModesList/List_selectie>   Mode_perstop    := modus(Mode, StopRef)[StopRef];
 		
 		attribute<string>           stop_id         := ReadFSS/Stop_times/data/stop_id;
 		attribute<Stops>            StopRef         := rlookup(ReadFSS/Stop_times/data/stop_id, Stops/stop_id);
 		attribute<uint32>           Ordinal         := uint32(ReadFSS/Stop_times/data/stop_sequence);
 		 
-		attribute<upoint>           Trip_x_Ordinal  := point(Ordinal, TripRef, upoint);
+		attribute<upoint>           Trip_x_Ordinal  := point_xy(Ordinal, TripRef, upoint);
 		attribute<Trips_x_order_uq> txo_uq_rel      := rlookup(Trip_x_Ordinal, Trips_x_order_uq/Values);
 		attribute<uint32>           ordered_ord     := txo_uq_rel - Trips/first_txo[TripRef];
 		
-		attribute<upoint>           ThisStopUni     := point(TripRef, ordered_ord, upoint);
-		attribute<upoint>           NextStopUni     := point(TripRef, ordered_ord+1, upoint);
-		attribute<upoint>           PrevStopUni     := point(TripRef, ordered_ord-1, upoint);
+		attribute<upoint>           ThisStopUni     := point_xy(TripRef, ordered_ord, upoint);
+		attribute<upoint>           NextStopUni     := point_xy(TripRef, ordered_ord+1, upoint);
+		attribute<upoint>           PrevStopUni     := point_xy(TripRef, ordered_ord-1, upoint);
 		attribute<AllStopTimes>     NextStopId      := rlookup(NextStopUni, ThisStopUni);
 		attribute<AllStopTimes>     PrevStopId      := rlookup(PrevStopUni, ThisStopUni);
 		attribute<rdc>         FromPoint       := Stops/point[StopRef];

@@ -91,7 +91,7 @@ container OrgToDest: FreeData = "false", using = "geometries"
 			attribute<geometries/rdc> segment(arc)          := LinkSet/segments[nr_OrgEntity];
 			attribute<ratio>          ratio_inBebouwdeKom   := MakeDefined(mean(CalcPoint/InbebouwdeKom, CalcPoint/SequenceNr)[ratio], 0.5[ratio]);
 
-			unit<uint32> CalcPoint := dyna_point(point, nextpoint, 5m) // om de x meter worden punten op de weg gelegd om te bepalen welk gedeelte van de weg in de bebouwde kom valt.
+			unit<uint32> CalcPoint := dyna_point_xy(point, nextpoint, 5m) // om de x meter worden punten op de weg gelegd om te bepalen welk gedeelte van de weg in de bebouwde kom valt.
 			,	DialogType = "Map"
 			,	DialogData = "point"
 			{

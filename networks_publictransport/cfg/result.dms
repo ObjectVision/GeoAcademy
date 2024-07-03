@@ -6,18 +6,18 @@ container GeoDMS_Academy_Network_PublicTransport
 	{
 		#include <ngr_layer.dms>
 
-		unit<fpoint> rdc_base : format = "EPSG:28992", DialogData = "ngr_layer";
-		unit<fpoint> rdc      := range(rdc_base, point(0f, 300000f), point(280000f, 625000f)); //heel NL
-		unit<ipoint> rdc_mm   := gridset(rdc, point(0.001,0.001), point(0.0, 0.0), ipoint);
+		unit<fpoint> rdc_base : SpatialReference = "EPSG:28992", DialogData = "ngr_layer";
+		unit<fpoint> rdc      := range(rdc_base, point_xy(0f, 300000f), point_xy(280000f, 625000f)); //heel NL
+		unit<ipoint> rdc_mm   := gridset(rdc, point_xy(0.001,0.001), point_xy(0.0, 0.0), ipoint);
 		
-		unit<dpoint>  wgs84_base : format = "EPSG:4326";
+		unit<dpoint>  wgs84_base : SpatialReference = "EPSG:4326";
 		
 		unit<uint32> selection_polygon : nrofrows = 1, Using = "units"
 		{
-			parameter<rdc> top_left     := point(NL_grid/x_min - 5000[m], NL_grid/y_max + 5000[m], rdc); //XY
-			parameter<rdc> top_right    := point(NL_grid/x_max + 5000[m], NL_grid/y_max + 5000[m], rdc);
-			parameter<rdc> bottom_left  := point(NL_grid/x_min - 5000[m], NL_grid/y_min - 5000[m], rdc);
-			parameter<rdc> bottom_right := point(NL_grid/x_max + 5000[m], NL_grid/y_min - 5000[m], rdc);
+			parameter<rdc> top_left     := point_xy(NL_grid/x_min - 5000[m], NL_grid/y_max + 5000[m], rdc); //XY
+			parameter<rdc> top_right    := point_xy(NL_grid/x_max + 5000[m], NL_grid/y_max + 5000[m], rdc);
+			parameter<rdc> bottom_left  := point_xy(NL_grid/x_min - 5000[m], NL_grid/y_min - 5000[m], rdc);
+			parameter<rdc> bottom_right := point_xy(NL_grid/x_max + 5000[m], NL_grid/y_min - 5000[m], rdc);
 			
 			unit<uint32> point_set : nrofrows = 5
 			{
@@ -66,18 +66,18 @@ container GeoDMS_Academy_Network_PublicTransport
 				range(
 					 gridset(
 						 rdc
-						,point(gridsize, -gridsize, rdc)
-						,point(x_min, y_max, rdc)
+						,point_xy(gridsize, -gridsize, rdc)
+						,point_xy(x_min, y_max, rdc)
 						,spoint
 					)
-					,point(0s, 0s)
-					,point(nr_cols, nr_rows)
+					,point_xy(0s, 0s)
+					,point_xy(nr_cols, nr_rows)
 				)
 			,	DialogData = "rdc"
 			,	DialogType = "map"
 			{
 				attribute<.>               id             := id(.);
-				attribute<rdc>             point_rd       := id[rdc] + point(0.5f * gridsize, -0.5f * gridsize, rdc);
+				attribute<rdc>             point_rd       := id[rdc] + point_xy(0.5f * gridsize, -0.5f * gridsize, rdc);
 				attribute<uint32>          identificatie  := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * 250);
 				attribute<domain_1000m>    grid_1000m_rel := id(.)[domain_1000m];
 				
@@ -139,22 +139,22 @@ container GeoDMS_Academy_Network_PublicTransport
 				range(
 					 gridset(
 						 rdc
-						,point(gridsize_500m, -gridsize_500m, rdc)
-						,point(x_min, y_max, rdc)
+						,point_xy(gridsize_500m, -gridsize_500m, rdc)
+						,point_xy(x_min, y_max, rdc)
 						,spoint
 					)
-					,point(0s, 0s)
-					,point(nr_cols_500m, nr_rows_500m)
+					,point_xy(0s, 0s)
+					,point_xy(nr_cols_500m, nr_rows_500m)
 				)
 			,	DialogData = "rdc"
 			{
 				attribute<domain>      grid_100m_rel    := id(.)[domain];
 			}
 
-			unit<spoint> domain_500m := TiledUnit(Point(1000s, 1200s, domain_500m_untiled))
+			unit<spoint> domain_500m := TiledUnit(point_xy(1000s, 1200s, domain_500m_untiled))
 			{
 				attribute<.>               id               := id(.);
-				attribute<rdc>             point_rd         := id[rdc] + point(0.5f * gridsize_500m, -0.5f * gridsize_500m, rdc);
+				attribute<rdc>             point_rd         := id[rdc] + point_xy(0.5f * gridsize_500m, -0.5f * gridsize_500m, rdc);
 				attribute<uint32>          identificatie    := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * 250);
 				attribute<string>          id_name          := 'p' + string(identificatie);
 			}
@@ -180,22 +180,22 @@ container GeoDMS_Academy_Network_PublicTransport
 				range(
 					 gridset(
 						 rdc
-						,point(gridsize_1000m, -gridsize_1000m, rdc)
-						,point(x_min, y_max, rdc)
+						,point_xy(gridsize_1000m, -gridsize_1000m, rdc)
+						,point_xy(x_min, y_max, rdc)
 						,spoint
 					)
-					,point(0s, 0s)
-					,point(nr_cols_1000m, nr_rows_1000m)
+					,point_xy(0s, 0s)
+					,point_xy(nr_cols_1000m, nr_rows_1000m)
 				)
 			,	DialogData = "rdc"
 			{
 				attribute<domain>      grid_100m_rel    := id(.)[domain];
 			}
 
-			unit<spoint> domain_1000m := TiledUnit(Point(1000s, 1200s, domain_1000m_untiled))
+			unit<spoint> domain_1000m := TiledUnit(point_xy(1000s, 1200s, domain_1000m_untiled))
 			{
 				attribute<.>               id               := id(.);
-				attribute<rdc>             point_rd         := id[rdc] + point(0.5f * gridsize_1000m, -0.5f * gridsize_1000m, rdc);
+				attribute<rdc>             point_rd         := id[rdc] + point_xy(0.5f * gridsize_1000m, -0.5f * gridsize_1000m, rdc);
 				attribute<uint32>          identificatie    := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * 250);
 			}
 			
@@ -220,22 +220,22 @@ container GeoDMS_Academy_Network_PublicTransport
 				range(
 					 gridset(
 						 rdc
-						,point(gridsize_5000m, -gridsize_5000m, rdc)
-						,point(x_min, y_max, rdc)
+						,point_xy(gridsize_5000m, -gridsize_5000m, rdc)
+						,point_xy(x_min, y_max, rdc)
 						,spoint
 					)
-					,point(0s, 0s)
-					,point(nr_cols_5000m, nr_rows_5000m)
+					,point_xy(0s, 0s)
+					,point_xy(nr_cols_5000m, nr_rows_5000m)
 				)
 			,	DialogData = "rdc"
 			{
 				attribute<domain>      grid_100m_rel    := id(.)[domain];
 			}
 
-			unit<spoint> domain_5000m := TiledUnit(Point(1000s, 1200s, domain_5000m_untiled))
+			unit<spoint> domain_5000m := TiledUnit(point_xy(1000s, 1200s, domain_5000m_untiled))
 			{
 				attribute<.>               id               := id(.);
-				attribute<rdc>             point_rd         := id[rdc] + point(0.5f * gridsize_5000m, -0.5f * gridsize_5000m, rdc);
+				attribute<rdc>             point_rd         := id[rdc] + point_xy(0.5f * gridsize_5000m, -0.5f * gridsize_5000m, rdc);
 				attribute<uint32>          identificatie    := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * 250);
 			}
 			
@@ -308,9 +308,11 @@ container GeoDMS_Academy_Network_PublicTransport
 			parameter<string>   DestSet_string          := Destset + '_' + Dest_location_scale;
 			parameter<string>   fileNamePrefix          :=  '%LocalDataDir%/GeoDMS_Academy/Output/';  //Locatie waar output files moeten worden opgeslagen.
 		
-		
-			unit<uint32> SampleDay := subset(Time/Day = 0) //Hier worden de analyse tijdstippen opgegeven. LET OP: Verander je deze dan zul je ook de NDW_meetmomenten/time moeten aanpassen. En de ChosenMoments ook wanneer er meer/minder momenten opgegeven zijn.
+			unit<uint32> SampleDay := select_with_attr_by_org_rel(Time, Time/Day = 0) //Hier worden de analyse tijdstippen opgegeven. LET OP: Verander je deze dan zul je ook de NDW_meetmomenten/time moeten aanpassen. En de ChosenMoments ook wanneer er meer/minder momenten opgegeven zijn.
 			{
+				attribute<bool>    ChosenMoments   := =AsList(HoursMinutes/str,' || ');
+				attribute<Time>    Time_rel        := org_rel;
+				
 				unit<uint8> ChosenHours : nrofrows = 1
 				{
 					attribute<uint32> values : [7];
@@ -321,32 +323,16 @@ container GeoDMS_Academy_Network_PublicTransport
 				}
 				unit<uint8> HoursMinutes := combine_uint8(ChosenHours, ChosenMinutes)
 				{
-					attribute<uint32> Hours     := ChosenHours/values[nr_1];
-					attribute<uint32> Minutes   := ChosenMinutes/values[nr_2];
-					attribute<string> str       := '(hour == '+string(Hours)+'[hours] && minute == '+string(Minutes)+' && second == 0)';
-				}
-				
-				attribute<Hours>   Hour            := rlookup(Time/Hour[Nr_OrgEntity], Hours/Hour);
-				attribute<uint32>  Minute          := Time/Minute[Nr_OrgEntity];
-				attribute<uint32>  Second          := Time/Second[Nr_OrgEntity];
-				
-				attribute<bool>    ChosenMoments   := =AsList(HoursMinutes/str,' || ');
-				
-				attribute<string>  LabelText       := Time/LabelText[Nr_OrgEntity], DialogType = "LabelText";
-				attribute<string>  TemplatableText := Time/TemplatableText[Nr_OrgEntity];
-				
-				unit<uint32> Hours: NrOfRows = 24 
-				{
-					attribute<uint32> Hour      := id(.);
-					attribute<string> LabelText := string(Hour) + 'h', DialogType = "LabelText";
+					attribute<uint32> Hours     := ChosenHours/values[first_rel];
+					attribute<uint32> Minutes   := ChosenMinutes/values[second_rel];
+					attribute<string> str       := '(hour == '+string(Hours)+' && minute == '+string(Minutes)+' && second == 0)';
 				}
 			}
 			
-			unit<uint32> MeasureMoments := subset(SampleDay/ChosenMoments)
+			unit<uint32> MeasureMoments := select_with_attr_by_cond(SampleDay, SampleDay/ChosenMoments)
 			{
-				attribute<Time>    Moment := SampleDay/Nr_OrgEntity[Nr_OrgEntity];
+				attribute<Time>    Moment := Time_rel;
 				attribute<string>  Name   := Time/TemplatableText[Moment];
-				attribute<string>  Label  := name, DialogType = "LabelText";
 			}
 		
 			container Combines
@@ -357,8 +343,8 @@ container GeoDMS_Academy_Network_PublicTransport
 				}
 				unit<uint32> MomentXattributes := combine(MeasureMoments,Dijkstra_attributes)
 				{
-					attribute<string> MomentName       := MeasureMoments/name[nr_1];
-					attribute<string> DijkstraAttrName := Dijkstra_attributes/name[nr_2];
+					attribute<string> MomentName       := MeasureMoments/name[first_rel];
+					attribute<string> DijkstraAttrName := Dijkstra_attributes/name[second_rel];
 					attribute<string> name             := MomentName + '_' + DijkstraAttrName;
 				}
 			}
@@ -389,11 +375,7 @@ container GeoDMS_Academy_Network_PublicTransport
 		}
 	}
 
-	
-	
 	#include<SourceData.dms>
-	
 	#include<NetworkSetup.dms>
-	
 	#include<Templates.dms>
 }

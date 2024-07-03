@@ -55,8 +55,8 @@ container PublicTransport : using = "Units;ModelParameters"
 				attribute<Time>                       FromTime          := ='OD_unit/'+FromTime_str+'[nr_OrgEntity]';
 				attribute<Time>                       toTime            := ='OD_unit/'+ToTime_str+'[nr_OrgEntity]';
 				attribute<string>                     LabelText         := OD_unit/LabelText[nr_OrgEntity], DialogType = "LabelText";
-				attribute<upoint>                     MomentxPlace_O2S  := point(toTime, Place_rel, upoint);
-				attribute<upoint>                     MomentxPlace_S2D  := point(FromTime, Place_rel, upoint);
+				attribute<upoint>                     MomentxPlace_O2S  := point_xy(toTime, Place_rel, upoint);
+				attribute<upoint>                     MomentxPlace_S2D  := point_xy(FromTime, Place_rel, upoint);
 				attribute<NodeSet>                    NodeRef_O2S       := rlookup(MomentxPlace_O2S, NodeSet/values);
 				attribute<NodeSet>                    NodeRef_S2D       := rlookup(MomentxPlace_S2D, NodeSet/values);
 			}

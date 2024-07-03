@@ -8,8 +8,8 @@ container PublicTransport : using = "Units;ModelParameters"
 	{
 		unit<uint64> Combine_OrgDest        := combine_uint64(Org, Dest)
 		{
-			attribute<string> OrgName  := Org/name[nr_1];
-			attribute<string> DestName := Dest/name[nr_2];
+			attribute<string> OrgName  := Org/name[first_rel];
+			attribute<string> DestName := Dest/name[second_rel];
 			attribute<string> Label    := OrgName +'_'+DestName, DialogType = "LabelText";
 		}
 	}
@@ -24,10 +24,10 @@ container PublicTransport : using = "Units;ModelParameters"
 		unit<uint32>        NodeSet    := SourceData/GTFS/StaticNets/Static_net/NodeSet;
 		unit<uint32>        Places     := SourceData/GTFS/StaticNets/allLinks/Places;
 		
-		unit<uint64>        Org2Stop_W        := CreateODconnections/Sparse_uitwerking_Org2Stop_W/AB;
-		unit<uint64>        Stop2Dest_W       := CreateODconnections/Sparse_uitwerking_Stop2Dest_W/AB;
-		unit<uint64>        Org2Stop_B        := CreateODconnections/Sparse_uitwerking_Org2Stop_B/AB;
-		unit<uint64>        Stop2Dest_B       := CreateODconnections/Sparse_uitwerking_Stop2Dest_B/AB;
+		unit<uint32>        Org2Stop_W        := CreateODconnections/Sparse_uitwerking_Org2Stop_W/AB;
+		unit<uint32>        Stop2Dest_W       := CreateODconnections/Sparse_uitwerking_Stop2Dest_W/AB;
+		unit<uint32>        Org2Stop_B        := CreateODconnections/Sparse_uitwerking_Org2Stop_B/AB;
+		unit<uint32>        Stop2Dest_B       := CreateODconnections/Sparse_uitwerking_Stop2Dest_B/AB;
 		unit<uint64>        Combine_OrgDest := PerMeasureMoment/Combine_OrgDest;
 		
 		container TransitionTypes := 
@@ -38,7 +38,7 @@ container PublicTransport : using = "Units;ModelParameters"
 		
 		Template Transition_T
 		{
-			unit<uint64>      OD_unit;
+			unit<uint32>      OD_unit;
 			parameter<string> OD_unit_name;
 			parameter<string> Mode;
 			parameter<Time>   ModeMax;
@@ -52,7 +52,7 @@ container PublicTransport : using = "Units;ModelParameters"
 																	? Arrive_at_time_CalcStr
 																	: Departure_at_time_CalcStr;
 
-			unit<uint64> Transition := =CalcStr
+			unit<uint32> Transition := =CalcStr
 			{
 				attribute<Org>                        Org_rel           := ='OD_unit/'+OrgDest+'_rel[nr_OrgEntity]';
 				attribute<Dest>                       Dest_rel          := ='OD_unit/'+OrgDest+'_rel[nr_OrgEntity]';
@@ -64,8 +64,8 @@ container PublicTransport : using = "Units;ModelParameters"
 				attribute<Time>                       FromTime          := ='OD_unit/'+FromTime_str+'[nr_OrgEntity]';
 				attribute<Time>                       toTime            := ='OD_unit/'+ToTime_str+'[nr_OrgEntity]';
 				attribute<string>                     LabelText         := OD_unit/LabelText[nr_OrgEntity], DialogType = "LabelText";
-				attribute<upoint>                     MomentxPlace_O2S  := point(toTime, Place_rel, upoint);
-				attribute<upoint>                     MomentxPlace_S2D  := point(FromTime, Place_rel, upoint);
+				attribute<upoint>                     MomentxPlace_O2S  := point_xy(toTime, Place_rel, upoint);
+				attribute<upoint>                     MomentxPlace_S2D  := point_xy(FromTime, Place_rel, upoint);
 				attribute<NodeSet>                    NodeRef_O2S       := rlookup(MomentxPlace_O2S, NodeSet/values);
 				attribute<NodeSet>                    NodeRef_S2D       := rlookup(MomentxPlace_S2D, NodeSet/values);
 			}
@@ -317,7 +317,7 @@ container PublicTransport : using = "Units;ModelParameters"
 					unit<uint32> Matrix_Array := org
 					{
 						attribute<string> org_name           := org/name;
-						attribute<string> impedance_list := AsList(string(MakeDefined(Complete_OrgDest/ShortestTraveltime_min, -1f)), ';', Complete_OrgDest/nr_1);
+						attribute<string> impedance_list := AsList(string(MakeDefined(Complete_OrgDest/ShortestTraveltime_min, -1f)), ';', Complete_OrgDest/first_rel);
 					}
 
 					unit<uint32> Header : nrofrows = 1

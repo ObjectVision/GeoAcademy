@@ -37,12 +37,12 @@ container Buffers:	Using = "units;classifications"
 		{
 			attribute<FPoint> xy   :=
 				Point(
-					  entrance/x[nr_1] + float32(radius) * Float32(circle/x[nr_2])
-					, entrance/y[nr_1] + float32(radius) * Float32(circle/y[nr_2])
+					  entrance/x[first_rel] + float32(radius) * Float32(circle/x[second_rel])
+					, entrance/y[first_rel] + float32(radius) * Float32(circle/y[second_rel])
 					, geography/rdc
 				);
 		}			
-		attribute<geography/rdc> buffer (entrance, polygon) := points2sequence(points/xy, points/nr_1, #circle - points/nr_2 - 1);
+		attribute<geography/rdc> buffer (entrance, polygon) := points2sequence(points/xy, points/first_rel, #circle - points/second_rel - 1);
 		parameter<geography/rdc> buffer_diss (polygon) := union_polygon(buffer[geography/rdc_mm])[geography/rdc];
 	}
 }

@@ -90,8 +90,8 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 				}
 				unit<uint32> MomentXattributes := combine(MeasureMoments,Dijkstra_attributes)
 				{
-					attribute<string> MomentName       := MeasureMoments/name[nr_1];
-					attribute<string> DijkstraAttrName := Dijkstra_attributes/name[nr_2];
+					attribute<string> MomentName       := MeasureMoments/name[first_rel];
+					attribute<string> DijkstraAttrName := Dijkstra_attributes/name[second_rel];
 					attribute<string> name             := MomentName + '_' + DijkstraAttrName;
 				}
 			}
@@ -180,7 +180,7 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 					attribute<Time>                       toTime_Bike       := ScheduledSpaceTimeEvents/TimeRef[SSTE_rel];
 					attribute<string>                     LabelText         := OD_path/labeltext[OD_rel], DialogType = "LabelText";
 					
-					attribute<upoint>                     MomentxPlace      := point(toTime_Walk, Place_rel, upoint);
+					attribute<upoint>                     MomentxPlace      := point_xy(toTime_Walk, Place_rel, upoint);
 					attribute<allLinks/NodeSet>           NodeRef           := rlookup(MomentxPlace, allLinks/NodeSet/values);
 					
 					unit<uint32> uq_stops := unique(Place_rel)
@@ -232,7 +232,7 @@ container NetworkSetup : using = "units;SourceData;Classifications"
 																				: FromTime_Bike + Duration_Bike;
 					attribute<string>                     LabelText         := OD_path/labeltext[OD_rel], DialogType = "LabelText";
 					
-					attribute<upoint>                     MomentxPlace      := point(FromTime_Walk, Place_rel, upoint);
+					attribute<upoint>                     MomentxPlace      := point_xy(FromTime_Walk, Place_rel, upoint);
 					attribute<allLinks/NodeSet>           NodeRef           := rlookup(MomentxPlace, allLinks/NodeSet/values);
 					
 					unit<uint32> uq_stops := unique(Place_rel)

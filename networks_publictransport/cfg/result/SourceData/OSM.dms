@@ -87,15 +87,15 @@
 				parameter<uint32>   MaxNrNodex  := max(networks/nr_nodes);
 				parameter<networks> main        := rlookup(MaxNrNodex, nr_nodes); // we gaan ervan uit dat het netwerk met de meeste nodes het hoofd netwerk is
 			}
-			unit<uint32> NodesNotConnected := Subset(networks/partnr <> networks/main)
+			unit<uint32> NodesNotConnected := select_with_org_rel(networks/partnr <> networks/main)
 			{
-				attribute<geometries/rdc> point := NodeSet/Values[Nr_OrgEntity];
+				attribute<geometries/rdc> point := NodeSet/Values[org_rel];
 			}
 		}
 		
-		unit<uint32> result := Subset(MakeConnectedRoads/Linkset/isConnected)
+		unit<uint32> result := select_with_org_rel(MakeConnectedRoads/Linkset/isConnected)
 		{
-			attribute<geometries/rdc>         geometry (arc)                := MakeConnectedRoads/Linkset/Segments[nr_OrgEntity];
+			attribute<geometries/rdc>         geometry (arc)                := MakeConnectedRoads/Linkset/Segments[org_rel];
 			attribute<float32>                length                        := arc_length(geometry, float32);
 		}
 	}
