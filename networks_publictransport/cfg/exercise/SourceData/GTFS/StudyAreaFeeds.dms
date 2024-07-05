@@ -37,10 +37,8 @@ container StudyAreaFeeds
 		}
 	}
 	unit<uint32> Links := LoadFeeds/ScheduledLinks
-	, DialogData = "Line"
-	, DialogType = "map" 
 	{
-		attribute<rdc>                     Line (arc)       := LoadFeeds/ScheduledLinks/Line;
+		attribute<rdc>                     geometry (arc)       := LoadFeeds/ScheduledLinks/geometry;
 		attribute<uint32>                  feedId           := const(0, LoadFeeds/ScheduledLinks, uint32);
 		attribute<uint32>                  OrgfromStop      := LoadFeeds/ScheduledLinks/fromStop;
 		attribute<uint32>                  OrgtoStop        := LoadFeeds/ScheduledLinks/toStop;

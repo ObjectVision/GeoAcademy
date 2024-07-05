@@ -75,8 +75,6 @@ Template StaticNetsCreator : using = "geometries"
 		}
 		
 		unit<uint32> TransferPaths := range(uint32, 0, sum(TransferFromStops/nTransfers))
-		, DialogData = "Line"
-		, DialogType = "map" 
 		{
 			attribute<TransferFromStops>  first_from_stop    := rlookup(id(.), TransferFromStops/first_transfer);
 			attribute<TransferFromStops>  from_trans_StopRef := cumulate(uint32(IsDefined(first_from_stop))) - 1;
@@ -119,8 +117,8 @@ Template StaticNetsCreator : using = "geometries"
 			attribute<uint32>             seq2          := quad = 4 && seq1 >= inStops/cumu_in_grid[from_StopRef] ? seq1 + 1 : seq1;
 			
 			attribute<string>             LabelText        := 'Transfer from ' + inStops/LabelText[from_StopRef] + ' to ' + inStops/LabelText[to_StopRef];
-			attribute<rdc>                Line (arc)       := points2sequence(GenLines/Points,GenLines/Seq,GenLines/Ord);
-			attribute<m>                  Distance         := arc_length(Line, m);
+			attribute<rdc>                geometry (arc)       := points2sequence(GenLines/Points,GenLines/Seq,GenLines/Ord);
+			attribute<m>                  Distance         := arc_length(geometry, m);
 			attribute<s_f>                minTransferTime  := Distance / ModelParameters/Advanced/TransferEffectiveSpeed;
 			
 			unit<uint32> GenLines:= union_unit(TransferPaths, TransferPaths)
@@ -131,12 +129,10 @@ Template StaticNetsCreator : using = "geometries"
 			}
 		}
 		unit<uint32> TransfersByStart := range(uint32, 0, sum(TransferPaths/nEvents))
-		, DialogData = "Line"
-		, DialogType = "map" 
 		{
 			attribute<TransferPaths>            first_trans_path  := rlookup(id(.), TransferPaths/first_trans_event);
 			attribute<TransferPaths>            PathRef           := cumulate(uint32(IsDefined(first_trans_path))) - 1;
-			attribute<rdc>                      Line (arc)        := TransferPaths/Line[PathRef];
+			attribute<rdc>                      geometry (arc)        := TransferPaths/geometry[PathRef];
 			attribute<Stops>                    fromStop          := TransferPaths/from_StopRef[PathRef];
 			attribute<Stops>                    toStop            := TransferPaths/to_StopRef[PathRef];
 			attribute<bool>                     NeedsTranferTimePenalty := TransferPaths/NeedsTranferTimePenalty[PathRef];
@@ -150,9 +146,8 @@ Template StaticNetsCreator : using = "geometries"
 	}
 	
 	unit<uint32> allLinks := union_unit(ScheduledLinks, CreateTransfersSet/TransfersByStart)
-	, DialogData = "Line", DialogType = "map" 
 	{
-		attribute<rdc>            Line (arc) := union_data(., ScheduledLinks/Line, CreateTransfersSet/TransfersByStart/Line); 
+		attribute<rdc>            geometry (arc) := union_data(., ScheduledLinks/geometry, CreateTransfersSet/TransfersByStart/geometry); 
 		attribute<Time>           fromTime   := union_data(., ScheduledLinks/depTime, CreateTransfersSet/TransfersByStart/fromTime); 
 		attribute<Time>           toTime     := union_data(., ScheduledLinks/arrTime, CreateTransfersSet/TransfersByStart/toTime); 
 		attribute<s_f>            Duration   := union_data(., ScheduledLinks/Duration, CreateTransfersSet/TransfersByStart/Duration); 
@@ -161,8 +156,8 @@ Template StaticNetsCreator : using = "geometries"
 		attribute<string>         RouteName    := union_data(., ScheduledLinks/RouteName, const('Walking',CreateTransfersSet/TransfersByStart));
 		attribute<ModesList/List_selectie> Mode       := union_data(., ScheduledLinks/Mode, const(ModesList/List_selectie/V/Walking, CreateTransfersSet/TransfersByStart, ModesList/List_selectie));
 		attribute<LinkTypes>      LinkType   := union_data(., const(LinkTypes/Values/Scheduled,ScheduledLinks,LinkTypes), const(LinkTypes/Values/Transfer,CreateTransfersSet/TransfersByStart,LinkTypes));
-		attribute<rdc>            fromPoint  := first_point(Line);
-		attribute<rdc>            toPoint    := last_point(Line);
+		attribute<rdc>            fromPoint  := first_point(geometry);
+		attribute<rdc>            toPoint    := last_point(geometry);
 		attribute<Places>         FromPlace  := rlookup(fromPoint, Places/Values);
 		attribute<Places>         ToPlace    := rlookup(toPoint, Places/Values);
 		
@@ -202,7 +197,7 @@ Template StaticNetsCreator : using = "geometries"
 		}
 		unit<uint32> WaitingAtStop := UniqueMomentXStop 
 		{
-			attribute<rdc>          line (arc):= points2sequence(UniqueMomentXStop/MakeWaitingLines/point, UniqueMomentXStop/MakeWaitingLines/Seq, UniqueMomentXStop/MakeWaitingLines/Ord);
+			attribute<rdc>          geometry (arc):= points2sequence(UniqueMomentXStop/MakeWaitingLines/point, UniqueMomentXStop/MakeWaitingLines/Seq, UniqueMomentXStop/MakeWaitingLines/Ord);
 			attribute<Stops>        FromStop  := StopRef;
 			attribute<Stops>        ToStop    := StopRef[NextMoment];
 			attribute<AllPlaces>    FromPlace := Stops/PlaceRef[FromStop];
@@ -222,9 +217,9 @@ Template StaticNetsCreator : using = "geometries"
 		}
 	}
 
-	unit<uint32> Static_Net := union_unit(allLinks, allLinks/WaitingAtStop), DialogData = "Line", DialogType = "Map"
+	unit<uint32> Static_Net := union_unit(allLinks, allLinks/WaitingAtStop)
 	{
-		attribute<rdc>       Line (arc) := union_data(., allLinks/line, allLinks/WaitingAtStop/line);
+		attribute<rdc>       geometry (arc) := union_data(., allLinks/geometry, allLinks/WaitingAtStop/geometry);
 		attribute<AllPlaces> FromPlace  := union_data(., allLinks/FromPlace, allLinks/WaitingAtStop/FromPlace);
 		attribute<AllPlaces> ToPlace    := union_data(., allLinks/ToPlace, allLinks/WaitingAtStop/ToPlace);
 		attribute<rdc>       FromPoint  := union_data(., allLinks/FromPoint, allLinks/WaitingAtStop/FromPoint);
