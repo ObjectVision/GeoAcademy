@@ -170,7 +170,7 @@ container LoadFeeds : using = "classifications"
 		
 		attribute<upoint>           ThisStopUni     := point_xy(TripRef, ordered_ord, upoint);
 		attribute<upoint>           NextStopUni     := point_xy(TripRef, ordered_ord+1, upoint);
-		attribute<upoint>           PrevStopUni     := point_xy(TripRef, ordered_ord-1, upoint);
+		attribute<upoint>           PrevStopUni     := point_xy(TripRef, sub_or_null(ordered_ord,1), upoint);
 		attribute<AllStopTimes>     NextStopId      := rlookup(NextStopUni, ThisStopUni);
 		attribute<AllStopTimes>     PrevStopId      := rlookup(PrevStopUni, ThisStopUni);
 		attribute<rdc>         FromPoint       := Stops/point[StopRef];

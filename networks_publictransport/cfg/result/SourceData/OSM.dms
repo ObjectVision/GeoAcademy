@@ -1,6 +1,5 @@
 // container OSM
 // {
-
 	// unit<uint32> OSM_fss 
 	// :	StorageName = "= '%ProjDir%/Data/Pedestrian_network_20200117.fss'"
 	// ,	StorageReadOnly = "true"
@@ -14,8 +13,6 @@
 		// attribute<bool> NotUsefull_pedestrianpaths := wegtype == /Classifications/osm/wegtype/V/cycleway
 														// || wegtype == /Classifications/osm/wegtype/V/service
 														// || wegtype == /Classifications/osm/wegtype/V/primary;
-		
-		
 		// unit<uint32> seq2point_simpl := sequence2points(geometry)
 		// {
 			// attribute<bool> IsRandstad := IsDefined(point_in_polygon(point, /SourceData/RegioIndelingen/Read_Provincie_GML/sub/geometry));
@@ -27,9 +24,6 @@
 			// attribute<classifications/OSM/wegtype>  wegtype:= ../wegtype[nr_OrgEntity];
 		// }
 	// }
-	
-	
-		
 		
 	// unit<uint32> OSM_gpkg := OSM_fss/sub
 	// ,	StorageName = "= '%ProjDir%/Data/Pedestrian_network_20200117.gpkg'"
@@ -63,7 +57,7 @@
 				{
 					attribute<geometries/rdc>   point        := Union_Data(pointset, LinkSet/point, LinkSet/nextpoint);
 					attribute<bool>             isConnected  := isNull(rlookup(point, NodesNotConnected/point));
-					attribute<Lines>            roadsnr      := Union_Data(pointset, LinkSet/SequenceNr, LinkSet/SequenceNr);
+					attribute<OSM>            roadsnr      := Union_Data(pointset, LinkSet/SequenceNr, LinkSet/SequenceNr);
 					attribute<LinkSet>          ArcID        := value(ID(pointset) % nrofrows(LinkSet), LinkSet);
 					attribute<uint32>           VolgNr       := ID(pointset) / nrofrows(LinkSet);
 				}
@@ -77,8 +71,8 @@
 				attribute<Linkset>          LinkSetnr := rlookup(Values, LinkSet/point);
 				attribute<Lines>            roadsnr := LinkSet/SequenceNr[LinkSetnr];
 			}
-			attribute<NodeSet> F1(LinkSet)  := rlookup(LinkSet/point,     NodeSet/Values);
-			attribute<NodeSet> F2(LinkSet)  := rlookup(LinkSet/nextpoint, NodeSet/Values);
+			attribute<NodeSet> F1 (LinkSet)  := rlookup(LinkSet/point,     NodeSet/Values);
+			attribute<NodeSet> F2 (LinkSet)  := rlookup(LinkSet/nextpoint, NodeSet/Values);
 
 			unit<uint32> networks := connected_parts(F1, F2)
 			{
